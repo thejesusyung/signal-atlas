@@ -134,7 +134,7 @@ class TopicExtractor:
                 raise ValueError("topic item must be an object")
             topic_name = str(item["topic_name"]).strip().lower()
             if topic_name not in self.topic_labels:
-                raise ValueError(f"Unsupported topic label: {topic_name}")
+                topic_name = "world"  # fallback for labels not in the allowed set
             assignments.append(
                 TopicAssignment(
                     topic_name=topic_name,

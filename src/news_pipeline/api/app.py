@@ -1,26 +1,70 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from news_pipeline.config import get_settings
 from news_pipeline.db.models import Entity, EntityType, RawArticle
 from news_pipeline.db.session import get_session
+from news_pipeline.db.models import Signal
 from news_pipeline.services.article_service import (
     get_article,
     get_articles_for_entity,
+    get_graph_data,
+    get_similar_articles,
     list_articles,
     list_entities,
     list_topics,
     pipeline_stats,
 )
+from news_pipeline.services.signal_service import get_latest_signals
+
+_STATIC = Path(__file__).parent / "static"
 
 settings = get_settings()
 app = FastAPI(title="News Intelligence Pipeline API", version="0.1.0")
+
+
+@app.get("/brief")
+def get_brief(session: Session = Depends(get_session)) -> dict[str, Any]:
+    signals = get_latest_signals(session, limit=10)
+    return {"signals": [_serialize_signal(s) for s in signals], "count": len(signals)}
+
+
+@app.get("/similar/{article_id}")
+def get_similar(
+    article_id: UUID,
+    limit: int = Query(default=10, ge=1, le=50),
+    session: Session = Depends(get_session),
+) -> dict[str, Any]:
+    pairs = get_similar_articles(session, article_id, limit=limit)
+    return {
+        "article_id": str(article_id),
+        "similar": [
+            {**_serialize_article_summary(article), "distance": round(distance, 4)}
+            for article, distance in pairs
+        ],
+    }
+
+
+@app.get("/", include_in_schema=False)
+def serve_map() -> FileResponse:
+    return FileResponse(_STATIC / "index.html")
+
+
+@app.get("/graph")
+def get_graph(
+    min_articles: int = Query(default=1, ge=1),
+    max_entities: int = Query(default=80, ge=1, le=300),
+    session: Session = Depends(get_session),
+) -> dict[str, Any]:
+    return get_graph_data(session, min_articles=min_articles, max_entities=max_entities)
 
 
 @app.get("/articles")
@@ -144,4 +188,18 @@ def _serialize_entity(entity: Entity) -> dict[str, Any]:
         "entity_type": entity.entity_type.value,
         "normalized_name": entity.normalized_name,
         "article_count": entity.article_count,
+    }
+
+
+def _serialize_signal(sig: Signal) -> dict[str, Any]:
+    return {
+        "id": str(sig.id),
+        "signal_type": sig.signal_type,
+        "entity_id": str(sig.entity_id) if sig.entity_id else None,
+        "entity_name": sig.entity.name if sig.entity_id and sig.entity else None,
+        "topic_name": sig.topic_name,
+        "score": sig.score,
+        "summary": sig.summary,
+        "detected_at": sig.detected_at.isoformat() if sig.detected_at else None,
+        "article_ids": sig.article_ids,
     }

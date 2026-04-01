@@ -47,12 +47,25 @@ class Settings(BaseSettings):
     llm_rate_limit_backend: str = Field(default="auto", alias="LLM_RATE_LIMIT_BACKEND")
 
     topic_labels: str = Field(
-        default="technology,politics,business,science,health,entertainment,sports,world",
+        default="technology,politics,business,science,health,entertainment,sports,world,environment,finance,education,crime,climate",
         alias="TOPIC_LABELS",
     )
 
     api_page_size: int = Field(default=20, alias="API_PAGE_SIZE")
     api_max_page_size: int = Field(default=100, alias="API_MAX_PAGE_SIZE")
+
+    embedding_batch_size: int = Field(default=64, alias="EMBEDDING_BATCH_SIZE")
+    embedding_min_cluster_size: int = Field(default=5, alias="EMBEDDING_MIN_CLUSTER_SIZE")
+
+    signal_baseline_runs: int = Field(default=10, alias="SIGNAL_BASELINE_RUNS")
+    signal_zscore_threshold: float = Field(default=1.5, alias="SIGNAL_ZSCORE_THRESHOLD")
+    signal_top_n: int = Field(default=3, alias="SIGNAL_TOP_N")
+    mlflow_experiment_signals: str = Field(
+        default="signal_monitoring", alias="MLFLOW_EXPERIMENT_SIGNALS"
+    )
+    # Velocity windows for signal detection
+    signal_current_window_hours: int = Field(default=24, alias="SIGNAL_CURRENT_WINDOW_HOURS")
+    signal_baseline_window_hours: int = Field(default=72, alias="SIGNAL_BASELINE_WINDOW_HOURS")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

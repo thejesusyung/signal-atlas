@@ -1,26 +1,65 @@
 feeds:
-  - name: Reuters World
-    url: https://feeds.reuters.com/reuters/worldNews
-    category: world
-  - name: Reuters Business
-    url: https://feeds.reuters.com/reuters/businessNews
-    category: business
-  - name: AP Top News
-    url: https://apnews.com/hub/ap-top-news/rss
-    category: world
+  # Technology (existing — all working)
   - name: TechCrunch
     url: https://techcrunch.com/feed/
     category: technology
   - name: The Verge
     url: https://www.theverge.com/rss/index.xml
     category: technology
-  - name: Ars Technica
-    url: https://feeds.arstechnica.com/arstechnica/index
-    category: science
   - name: Wired
     url: https://www.wired.com/feed/rss
     category: technology
-  - name: ESPN Top Headlines
-    url: https://www.espn.com/espn/rss/news
+  - name: Ars Technica
+    url: https://feeds.arstechnica.com/arstechnica/index
+    category: science
+
+  # World News (replaced dead Reuters + AP feeds)
+  - name: BBC World
+    url: http://feeds.bbci.co.uk/news/world/rss.xml
+    category: world
+  - name: Al Jazeera
+    url: https://www.aljazeera.com/xml/rss/all.xml
+    category: world
+  - name: NYT World
+    url: https://rss.nytimes.com/services/xml/rss/nyt/World.xml
+    category: world
+
+  # Business & Finance (replaced dead Reuters Business)
+  - name: MarketWatch
+    url: https://feeds.marketwatch.com/marketwatch/topstories
+    category: business
+  - name: Investing.com
+    url: https://www.investing.com/rss/news.rss
+    category: finance
+
+  # Politics (new)
+  - name: NPR Politics
+    url: https://feeds.npr.org/1014/rss.xml
+    category: politics
+  - name: The Hill
+    url: https://thehill.com/feed/
+    category: politics
+
+  # Science & Health (new)
+  - name: Science Daily
+    url: https://www.sciencedaily.com/rss/all.xml
+    category: science
+  - name: NYT Health
+    url: https://rss.nytimes.com/services/xml/rss/nyt/Health.xml
+    category: health
+
+  # Sports (replaced dead ESPN feed)
+  - name: BBC Sport
+    url: http://feeds.bbci.co.uk/sport/rss.xml
+    category: sports
+  - name: CBS Sports
+    url: https://www.cbssports.com/rss/headlines/
     category: sports
 
+  # Environment & Climate (new)
+  - name: Guardian Environment
+    url: https://www.theguardian.com/environment/rss
+    category: environment
+  - name: Grist Climate
+    url: https://grist.org/feed/
+    category: climate

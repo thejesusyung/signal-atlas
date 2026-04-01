@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     gcc \
+    libgomp1 \
     libxml2-dev \
     libxslt1-dev \
     libjpeg-dev \
@@ -33,6 +34,9 @@ COPY --chown=airflow:root alembic.ini ./
 COPY --chown=airflow:root alembic ./alembic
 COPY --chown=airflow:root scripts ./scripts
 
-RUN python -m pip install --upgrade pip && python -m pip install -r requirements.txt
+RUN python -m pip install --upgrade pip \
+    && python -m pip install torch==2.3.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu \
+    && python -m pip install -r requirements.txt \
+    && python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
 CMD ["uvicorn", "news_pipeline.api.app:app", "--host", "0.0.0.0", "--port", "8000"]

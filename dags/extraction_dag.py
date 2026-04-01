@@ -63,9 +63,109 @@ def build_extraction_dag():
             )
             log_dict_artifact({"results": processed}, "extraction_batch.json")
 
+    @task
+    def embed_articles() -> dict:
+        """Embed all extracted articles that have no embedding yet."""
+        import numpy as np
+        from sqlalchemy import select
+        from news_pipeline.db.models import RawArticle
+        from news_pipeline.embeddings.encoder import encode_texts, vector_to_db
+
+        settings = get_settings()
+        with session_scope() as session:
+            articles = session.scalars(
+                select(RawArticle)
+                .where(
+                    RawArticle.processing_status == ProcessingStatus.extracted,
+                    RawArticle.embedding.is_(None),
+                    RawArticle.cleaned_text.isnot(None),
+                )
+                .order_by(RawArticle.ingested_at.asc())
+                .limit(settings.extraction_batch_size * 5)
+            ).all()
+
+            if not articles:
+                return {"embedded": 0}
+
+            texts = [a.cleaned_text or a.summary for a in articles]
+            vectors = encode_texts(texts, batch_size=settings.embedding_batch_size)
+            for article, vec in zip(articles, vectors):
+                article.embedding = vector_to_db(vec)
+
+        LOGGER.info("Embedded %d articles", len(articles))
+        return {"embedded": len(articles)}
+
+    @task
+    def cluster_articles() -> dict:
+        """Re-cluster all embedded articles and update cluster assignments."""
+        import numpy as np
+        from sqlalchemy import select, update
+        from news_pipeline.db.models import RawArticle
+        from news_pipeline.embeddings.encoder import vector_from_db
+        from news_pipeline.embeddings.clustering import NOISE_LABEL, cluster_embeddings, label_cluster
+
+        settings = get_settings()
+        with session_scope() as session:
+            rows = session.execute(
+                select(RawArticle.id, RawArticle.embedding, RawArticle.title)
+                .where(
+                    RawArticle.embedding.isnot(None),
+                    RawArticle.processing_status == ProcessingStatus.extracted,
+                )
+            ).all()
+
+            if len(rows) < settings.embedding_min_cluster_size:
+                LOGGER.info("Too few embedded articles (%d) to cluster; skipping", len(rows))
+                return {"clusters": 0, "articles_clustered": 0}
+
+            ids = [r.id for r in rows]
+            titles = [r.title for r in rows]
+            matrix = np.array([vector_from_db(r.embedding) for r in rows], dtype=np.float32)
+            labels = cluster_embeddings(matrix, settings.embedding_min_cluster_size)
+
+            cluster_titles: dict[int, list[str]] = {}
+            for title, label in zip(titles, labels):
+                if label != NOISE_LABEL:
+                    cluster_titles.setdefault(int(label), []).append(title)
+
+            cluster_label_map = {
+                cid: label_cluster(cid, ctitles) for cid, ctitles in cluster_titles.items()
+            }
+
+            for article_id, label in zip(ids, labels):
+                label_int = int(label)
+                session.execute(
+                    update(RawArticle)
+                    .where(RawArticle.id == article_id)
+                    .values(
+                        semantic_cluster_id=label_int if label_int != NOISE_LABEL else None,
+                        cluster_label=cluster_label_map.get(label_int, "unclustered"),
+                    )
+                )
+
+        n_clusters = len(set(int(l) for l in labels if int(l) != NOISE_LABEL))
+        LOGGER.info("Clustered %d articles into %d clusters", len(rows), n_clusters)
+        return {"clusters": n_clusters, "articles_clustered": len(rows)}
+
+    @task(pool="llm_pool")
+    def generate_signals() -> dict:
+        """Detect anomalous entity/topic velocity and generate LLM briefs."""
+        from news_pipeline.signals.detector import detect_and_persist_signals
+
+        provider = GroqProvider()
+        with session_scope() as session:
+            signals = detect_and_persist_signals(session, provider)
+        LOGGER.info("Generated %d signals", len(signals))
+        return {"signals_generated": len(signals)}
+
     article_ids = fetch_pending_article_ids()
     processed = process_article.expand(article_id=article_ids)
-    log_batch(processed)
+    logged = log_batch(processed)
+    embedded = embed_articles()
+    clustered = cluster_articles()
+    signaled = generate_signals()
+
+    logged >> embedded >> clustered >> signaled
 
 
 def _process_article(article_id: str) -> dict:

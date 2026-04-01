@@ -3,12 +3,12 @@ from __future__ import annotations
 import time
 
 import httpx
+import mlflow
 
 from news_pipeline.config import get_settings
 from news_pipeline.contracts import LLMResponse
 from news_pipeline.llm.rate_limit import RequestRateLimiter, get_shared_rate_limiter
 from news_pipeline.llm.provider import LLMProvider, LLMProviderError, LLMTraceContext
-from news_pipeline.tracking.experiment import log_llm_call_trace
 
 
 class GroqProvider(LLMProvider):
@@ -38,6 +38,7 @@ class GroqProvider(LLMProvider):
             },
         )
 
+    @mlflow.trace(span_type="LLM", name="groq_complete")
     def complete(
         self,
         prompt: str,
@@ -58,7 +59,6 @@ class GroqProvider(LLMProvider):
         max_tokens: int,
         trace_context: LLMTraceContext | None,
     ) -> LLMResponse:
-        settings = get_settings()
         last_error: Exception | None = None
         attempts: list[dict[str, object]] = []
         request_payload = {
@@ -104,14 +104,6 @@ class GroqProvider(LLMProvider):
                         )
                     )
                     if attempt >= self.max_retries:
-                        self._log_trace(
-                            settings.mlflow_experiment_extraction,
-                            trace_context,
-                            request_payload,
-                            attempts,
-                            None,
-                            str(last_error),
-                        )
                         raise last_error
                     time.sleep(self._retry_delay(attempt, retry_after))
                     continue
@@ -127,14 +119,6 @@ class GroqProvider(LLMProvider):
                         )
                     )
                     if attempt >= self.max_retries:
-                        self._log_trace(
-                            settings.mlflow_experiment_extraction,
-                            trace_context,
-                            request_payload,
-                            attempts,
-                            None,
-                            str(last_error),
-                        )
                         raise last_error
                     time.sleep(self._default_backoff(attempt))
                     continue
@@ -153,14 +137,6 @@ class GroqProvider(LLMProvider):
                         error_message=str(last_error),
                     )
                 )
-                self._log_trace(
-                    settings.mlflow_experiment_extraction,
-                    trace_context,
-                    request_payload,
-                    attempts,
-                    None,
-                    str(last_error),
-                )
                 raise last_error from error
             except httpx.HTTPError as error:
                 latency_ms = int((time.perf_counter() - started) * 1000)
@@ -173,14 +149,6 @@ class GroqProvider(LLMProvider):
                     )
                 )
                 if attempt >= self.max_retries:
-                    self._log_trace(
-                        settings.mlflow_experiment_extraction,
-                        trace_context,
-                        request_payload,
-                        attempts,
-                        None,
-                        str(error),
-                    )
                     raise
                 time.sleep(self._default_backoff(attempt))
                 continue
@@ -201,31 +169,17 @@ class GroqProvider(LLMProvider):
                     status_code=response.status_code,
                 )
             )
-            self._log_trace(
-                settings.mlflow_experiment_extraction,
-                trace_context,
-                request_payload,
-                attempts,
-                {
-                    "text": llm_response.text,
-                    "model": llm_response.model,
-                    "tokens_used": llm_response.tokens_used,
-                    "latency_ms": llm_response.latency_ms,
-                    "provider_name": llm_response.provider_name,
-                },
-                None,
-            )
+            span = mlflow.get_current_active_span()
+            if span is not None:
+                span.set_attribute("tokens_used", llm_response.tokens_used)
+                span.set_attribute("latency_ms", llm_response.latency_ms)
+                span.set_attribute("model", llm_response.model)
+                span.set_attribute("attempts", len(attempts))
+                if trace_context is not None:
+                    span.set_attribute("operation", trace_context.operation)
             return llm_response
 
         if last_error is not None:
-            self._log_trace(
-                settings.mlflow_experiment_extraction,
-                trace_context,
-                request_payload,
-                attempts,
-                None,
-                str(last_error),
-            )
             raise last_error
         raise LLMProviderError("Groq request failed without a response")
 
@@ -271,23 +225,3 @@ class GroqProvider(LLMProvider):
         if retry_after is not None:
             record["retry_after"] = retry_after
         return record
-
-    def _log_trace(
-        self,
-        experiment_name: str,
-        trace_context: LLMTraceContext | None,
-        request_payload: dict[str, object],
-        attempts: list[dict[str, object]],
-        response_payload: dict[str, object] | None,
-        error_message: str | None,
-    ) -> None:
-        log_llm_call_trace(
-            experiment_name=experiment_name,
-            provider_name=self.provider_name,
-            model_name=self.model,
-            trace_context=trace_context.to_dict() if trace_context is not None else None,
-            request_payload=request_payload,
-            attempts=attempts,
-            response_payload=response_payload,
-            error_message=error_message,
-        )

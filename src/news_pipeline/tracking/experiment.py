@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from contextlib import contextmanager
 from pathlib import Path
-import re
 import tempfile
 from typing import Any
 
@@ -59,60 +58,3 @@ def log_dict_artifact(
         mlflow.log_artifact(str(path), artifact_path=artifact_path)
     finally:
         path.unlink(missing_ok=True)
-
-
-def log_llm_call_trace(
-    *,
-    experiment_name: str,
-    provider_name: str,
-    model_name: str,
-    trace_context: dict[str, Any] | None,
-    request_payload: dict[str, Any],
-    attempts: list[dict[str, Any]],
-    response_payload: dict[str, Any] | None,
-    error_message: str | None,
-) -> None:
-    if mlflow.active_run() is None:
-        return
-
-    normalized_context = {key: str(value) for key, value in (trace_context or {}).items()}
-    operation = normalized_context.get("operation", "llm_call")
-    run_name = f"llm_{_slugify(operation)}"
-    params = {
-        "provider_name": provider_name,
-        "model_name": model_name,
-        "operation": operation,
-        **normalized_context,
-    }
-    metrics = {
-        "attempt_count": len(attempts),
-        "success": int(error_message is None),
-    }
-    if response_payload is not None:
-        metrics["tokens_used"] = int(response_payload.get("tokens_used", 0))
-        metrics["latency_ms"] = int(response_payload.get("latency_ms", 0))
-
-    with tracked_run(
-        experiment_name=experiment_name,
-        run_name=run_name,
-        params=params,
-        tags={"tracking_scope": "llm_call", "provider_name": provider_name},
-        nested=True,
-    ):
-        log_metrics(metrics)
-        log_dict_artifact(
-            {
-                "trace_context": trace_context or {},
-                "request": request_payload,
-                "attempts": attempts,
-                "response": response_payload,
-                "error_message": error_message,
-            },
-            artifact_file=f"{_slugify(operation)}.json",
-            artifact_path="llm_calls",
-        )
-
-
-def _slugify(value: str) -> str:
-    normalized = re.sub(r"[^a-zA-Z0-9]+", "_", value).strip("_").lower()
-    return normalized or "artifact"

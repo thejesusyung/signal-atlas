@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signal Atlas</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #060a14;
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      color: #e2e8f0;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* ── Graph ── */
+    #canvas { width: 100%; height: 100%; }
+
+    .link { stroke-linecap: round; transition: stroke-opacity 0.2s; }
+    .link.dim { stroke-opacity: 0.03 !important; }
+    .link.highlight { stroke-opacity: 0.75 !important; }
+
+    .node-entity circle { cursor: pointer; transition: filter 0.15s; }
+    .node-entity:hover circle { filter: brightness(1.4); }
+    .node-topic circle { cursor: pointer; }
+
+    .label-topic {
+      fill: #f1f5f9; font-size: 11px; font-weight: 800;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      pointer-events: none; text-anchor: middle; dominant-baseline: central;
+      paint-order: stroke; stroke: #060a14; stroke-width: 3px; stroke-linejoin: round;
+    }
+    .label-entity {
+      fill: #94a3b8; font-size: 9.5px; font-weight: 500;
+      pointer-events: none; text-anchor: middle;
+      paint-order: stroke; stroke: #060a14; stroke-width: 2.5px; stroke-linejoin: round;
+    }
+
+    @keyframes pulse-ring {
+      0%   { r: var(--pr); stroke-opacity: 0.55; }
+      100% { r: var(--pr-end); stroke-opacity: 0; }
+    }
+    .pulse { animation: pulse-ring 2.2s ease-out infinite; }
+
+    /* ── Tooltip ── */
+    #tip {
+      position: fixed; z-index: 200;
+      background: rgba(8,12,24,0.95); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px; padding: 12px 16px;
+      pointer-events: none; opacity: 0; transition: opacity 0.1s ease;
+      backdrop-filter: blur(14px); max-width: 230px;
+    }
+    #tip.show { opacity: 1; }
+    .tip-badge {
+      display: inline-block; padding: 2px 9px; border-radius: 99px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+      text-transform: uppercase; margin-bottom: 7px;
+    }
+    .tip-name { font-weight: 700; color: #f1f5f9; font-size: 14px; margin-bottom: 4px; }
+    .tip-row { color: #64748b; font-size: 12px; line-height: 1.7; }
+    .tip-row b { color: #94a3b8; font-weight: 600; }
+    .tip-heat { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+
+    /* ── Signals Sidebar ── */
+    #signals-sidebar {
+      position: fixed; top: 0; left: 0; bottom: 40px;
+      width: 260px; z-index: 50;
+      background: rgba(6,8,16,0.98);
+      border-right: 1px solid rgba(255,255,255,0.07);
+      backdrop-filter: blur(16px);
+      transform: translateX(0);
+      transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+      display: flex; flex-direction: row;
+    }
+    body:not(.sidebar-open) #signals-sidebar { transform: translateX(-260px); }
+
+    #signals-sidebar-inner {
+      flex: 1; overflow-y: auto; padding: 16px 14px;
+      display: flex; flex-direction: column;
+    }
+    #signals-sidebar-inner::-webkit-scrollbar { width: 3px; }
+    #signals-sidebar-inner::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+    #signals-sidebar-toggle {
+      position: absolute; top: 50%; right: -26px;
+      transform: translateY(-50%);
+      width: 26px; height: 52px;
+      background: rgba(6,8,16,0.98);
+      border: 1px solid rgba(255,255,255,0.07); border-left: none;
+      border-radius: 0 8px 8px 0;
+      color: #475569; font-size: 13px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: color 0.15s; z-index: 51;
+    }
+    #signals-sidebar-toggle:hover { color: #94a3b8; }
+
+    #signals-sidebar-hdr {
+      display: flex; align-items: center; gap: 8px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      margin-bottom: 12px; flex-shrink: 0;
+    }
+    #signals-sidebar-title { font-size: 9px; font-weight: 800; letter-spacing: 0.14em; color: #334155; flex: 1; }
+    #signals-sidebar-badge {
+      font-size: 10px; padding: 1px 8px; border-radius: 99px;
+      background: #7c3aed22; color: #a78bfa; border: 1px solid #7c3aed44; display: none;
+    }
+    #signals-sidebar-empty { font-size: 11px; color: #1e293b; padding: 4px 0; }
+
+    /* Signal cards v2 */
+    .signal-card-v2 {
+      border-radius: 10px; padding: 11px 13px; margin-bottom: 10px;
+      border: 1px solid rgba(255,255,255,0.07); cursor: pointer;
+      transition: border-color 0.15s, filter 0.15s; flex-shrink: 0;
+    }
+    .signal-card-v2:hover { filter: brightness(1.18); }
+    .signal-card-v2:last-child { margin-bottom: 0; }
+    .signal-card-v2.urgency-red    { background: rgba(239,68,68,0.08);  border-color: rgba(239,68,68,0.28); }
+    .signal-card-v2.urgency-orange { background: rgba(249,115,22,0.08); border-color: rgba(249,115,22,0.28); }
+    .signal-card-v2.urgency-yellow { background: rgba(234,179,8,0.08);  border-color: rgba(234,179,8,0.28); }
+    .signal-card-v2.urgency-muted  { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); }
+    .sig2-type { font-size: 9px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 4px; }
+    .urgency-red .sig2-type    { color: #f87171; }
+    .urgency-orange .sig2-type { color: #fb923c; }
+    .urgency-yellow .sig2-type { color: #facc15; }
+    .urgency-muted .sig2-type  { color: #a78bfa; }
+    .sig2-subject { font-size: 12.5px; font-weight: 700; color: #f1f5f9; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sig2-summary { font-size: 11px; color: #64748b; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px; }
+    .sig2-score-row { display: flex; align-items: center; gap: 7px; }
+    .sig2-bar-wrap { flex: 1; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+    .sig2-bar { height: 100%; border-radius: 2px; }
+    .urgency-red .sig2-bar    { background: #f87171; }
+    .urgency-orange .sig2-bar { background: #fb923c; }
+    .urgency-yellow .sig2-bar { background: #facc15; }
+    .urgency-muted .sig2-bar  { background: #64748b; }
+    .sig2-score-num { font-size: 10px; color: #334155; flex-shrink: 0; }
+
+    /* Layout shifts when sidebar open */
+    body.sidebar-open #header    { left: 260px; }
+    body.sidebar-open #feed-view { left: 260px; }
+    body.sidebar-open #legend    { left: 284px; }
+
+    /* ── Header ── */
+    #header {
+      position: fixed; top: 0; left: 0; right: 0;
+      padding: 16px 24px; display: flex; align-items: center; gap: 14px;
+      pointer-events: none; z-index: 10;
+      transition: left 0.28s cubic-bezier(0.4,0,0.2,1);
+    }
+    #header-title { flex-shrink: 0; }
+    #header h1 { font-size: 17px; font-weight: 800; letter-spacing: -0.04em; color: #f8fafc; }
+    #header .sub { font-size: 10px; color: #334155; margin-top: 2px; }
+    #stats-panel { text-align: right; flex-shrink: 0; }
+    .stat { font-size: 10.5px; color: #334155; line-height: 1.9; }
+    .stat b { color: #64748b; font-weight: 600; }
+
+    /* ── Graph search ── */
+    #graph-search-wrap {
+      flex: 1; display: flex; align-items: center; gap: 7px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 8px; padding: 5px 12px; pointer-events: auto;
+      max-width: 320px;
+    }
+    body.view-feed #graph-search-wrap { display: none; }
+    #graph-search-icon { color: #334155; font-size: 15px; flex-shrink: 0; line-height: 1; }
+    #graph-search-input {
+      background: none; border: none; outline: none;
+      color: #e2e8f0; font-size: 12px; width: 100%; font-family: inherit;
+    }
+    #graph-search-input::placeholder { color: #334155; }
+    #graph-search-clear {
+      background: none; border: none; color: #334155; cursor: pointer;
+      font-size: 16px; padding: 0; line-height: 1; flex-shrink: 0;
+    }
+    #graph-search-clear:hover { color: #64748b; }
+
+    /* ── View toggle ── */
+    #view-toggle-wrap { pointer-events: auto; flex-shrink: 0; }
+    .view-toggle-btn {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 8px; color: #94a3b8; font-size: 12px; font-weight: 700;
+      letter-spacing: 0.05em; padding: 6px 14px; cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .view-toggle-btn:hover { background: rgba(255,255,255,0.08); color: #f1f5f9; border-color: rgba(255,255,255,0.18); }
+    body.view-feed .view-toggle-btn { background: rgba(129,140,248,0.12); border-color: rgba(129,140,248,0.35); color: #818cf8; }
+
+    /* ── Legend ── */
+    #legend {
+      position: fixed; bottom: 56px; left: 24px; z-index: 10;
+      background: rgba(8,12,24,0.72); border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px; padding: 14px 18px; backdrop-filter: blur(12px);
+      transition: left 0.28s cubic-bezier(0.4,0,0.2,1);
+    }
+    .leg-section { margin-bottom: 12px; }
+    .leg-section:last-child { margin-bottom: 0; }
+    .leg-title { font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #334155; margin-bottom: 7px; }
+    .leg-item { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: #64748b; margin-bottom: 4px; }
+    .leg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    #recency-bar {
+      width: 100%; height: 4px; border-radius: 2px;
+      background: linear-gradient(to right, #374151, #64748b, #eab308, #f97316, #ef4444);
+      margin-bottom: 4px;
+    }
+    .recency-labels { display: flex; justify-content: space-between; font-size: 9px; color: #334155; }
+
+    #hint { position: fixed; bottom: 56px; right: 24px; font-size: 10.5px; color: #1e293b; z-index: 10; }
+
+    /* ── Article panel ── */
+    #panel {
+      position: fixed; top: 0; right: 0; bottom: 40px;
+      width: 340px; z-index: 100;
+      background: rgba(7,10,20,0.97); border-left: 1px solid rgba(255,255,255,0.07);
+      transform: translateX(100%); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+      display: flex; flex-direction: column; backdrop-filter: blur(18px);
+    }
+    #panel.open { transform: translateX(0); }
+    #panel-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0;
+    }
+    #panel-badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+    #panel-title { font-size: 16px; font-weight: 700; color: #f1f5f9; line-height: 1.3; }
+    #panel-count { font-size: 11px; color: #475569; margin-top: 4px; }
+    #panel-close { background: none; border: none; color: #475569; font-size: 20px; cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0; margin-left: 12px; margin-top: -2px; }
+    #panel-close:hover { color: #94a3b8; }
+    #panel-body { flex: 1; overflow-y: auto; padding: 12px 0; }
+    #panel-body::-webkit-scrollbar { width: 4px; }
+    #panel-body::-webkit-scrollbar-track { background: transparent; }
+    #panel-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+    .article-card { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
+    .article-card:hover { background: rgba(255,255,255,0.03); }
+    .article-card:last-child { border-bottom: none; }
+    .card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .card-source { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #475569; }
+    .card-age { font-size: 10px; color: #334155; }
+    .card-heat { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .card-title { display: block; font-size: 13px; font-weight: 500; color: #cbd5e1; line-height: 1.45; text-decoration: none; }
+    .card-title:hover { color: #f1f5f9; }
+    #panel-loading { padding: 32px 20px; color: #334155; font-size: 13px; text-align: center; }
+    .panel-feed-btn {
+      background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.25);
+      border-radius: 7px; color: #818cf8; font-size: 11.5px; font-weight: 600;
+      padding: 7px 14px; cursor: pointer; width: 100%; font-family: inherit;
+      transition: background 0.15s;
+    }
+    .panel-feed-btn:hover { background: rgba(129,140,248,0.16); }
+
+    /* ── Ticker ── */
+    #ticker {
+      position: fixed; bottom: 0; left: 0; right: 0; height: 40px; z-index: 150;
+      background: rgba(6,8,16,0.92); border-top: 1px solid rgba(255,255,255,0.05);
+      display: flex; align-items: center; backdrop-filter: blur(10px); overflow: hidden;
+    }
+    #ticker-label { flex-shrink: 0; padding: 0 14px; font-size: 9px; font-weight: 800; letter-spacing: 0.14em; color: #1e293b; border-right: 1px solid rgba(255,255,255,0.05); height: 100%; display: flex; align-items: center; }
+    #ticker-track { flex: 1; overflow: hidden; position: relative; height: 100%; }
+    #ticker-inner { display: flex; align-items: center; height: 100%; white-space: nowrap; will-change: transform; }
+    .ticker-item { display: inline-flex; align-items: center; gap: 8px; padding: 0 28px; font-size: 12px; color: #475569; flex-shrink: 0; }
+    .ticker-item .t-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .ticker-item .t-source { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; flex-shrink: 0; }
+    .ticker-item .t-title { color: #4b5563; }
+    .ticker-item .t-age { font-size: 10px; color: #1f2937; flex-shrink: 0; }
+    .ticker-sep { color: #1e293b; padding: 0 8px; flex-shrink: 0; font-size: 16px; line-height: 1; }
+
+    #loading-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #334155; z-index: 300; }
+
+    /* ── Feed view container ── */
+    #feed-view {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 40px;
+      z-index: 5; background: #060a14;
+      display: flex; flex-direction: column;
+      opacity: 0; visibility: hidden; pointer-events: none;
+      transition: opacity 0.22s ease, left 0.28s cubic-bezier(0.4,0,0.2,1);
+    }
+    body.view-feed #feed-view { opacity: 1; visibility: visible; pointer-events: auto; }
+
+    /* ── Hide graph-only elements in feed mode ── */
+    body.view-feed #canvas  { pointer-events: none; }
+    body.view-feed #legend  { display: none; }
+    body.view-feed #hint    { display: none; }
+    body.view-feed #tip     { display: none !important; }
+    body.view-feed #panel   { display: none; }
+
+    /* ── Feed pills wrap ── */
+    #feed-pills-wrap {
+      flex-shrink: 0; padding: 12px 24px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      background: rgba(6,10,20,0.92); backdrop-filter: blur(10px);
+    }
+
+    /* ── Feed source badge (cross-view breadcrumb) ── */
+    #feed-source-badge { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; }
+    #feed-back-btn { background: none; border: none; color: #475569; font-size: 11px; font-weight: 600; cursor: pointer; padding: 0; font-family: inherit; transition: color 0.15s; }
+    #feed-back-btn:hover { color: #94a3b8; }
+    #feed-source-label { font-size: 11px; color: #334155; }
+
+    /* ── Feed search ── */
+    #feed-search-row { padding-bottom: 10px; }
+    #feed-search-wrap {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 8px; padding: 7px 14px;
+    }
+    #feed-search-icon { color: #334155; font-size: 15px; flex-shrink: 0; line-height: 1; }
+    #feed-search-input { background: none; border: none; outline: none; color: #e2e8f0; font-size: 12.5px; flex: 1; font-family: inherit; }
+    #feed-search-input::placeholder { color: #334155; }
+    #feed-search-clear { background: none; border: none; color: #334155; cursor: pointer; font-size: 18px; padding: 0; line-height: 1; flex-shrink: 0; }
+    #feed-search-clear:hover { color: #64748b; }
+    #feed-pills-wrap.has-search .feed-pill { opacity: 0.35; pointer-events: none; }
+
+    /* ── Pills ── */
+    #feed-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+    .feed-pill {
+      padding: 4px 14px; border-radius: 99px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      cursor: pointer; border: 1px solid rgba(255,255,255,0.09);
+      background: rgba(255,255,255,0.04); color: #475569;
+      transition: background 0.15s, color 0.15s, border-color 0.15s; user-select: none;
+    }
+    .feed-pill:hover { background: rgba(255,255,255,0.08); color: #94a3b8; }
+
+    /* ── Scrollable grid area ── */
+    #feed-scroll { flex: 1; overflow-y: auto; padding: 20px 24px 28px; }
+    #feed-scroll::-webkit-scrollbar { width: 4px; }
+    #feed-scroll::-webkit-scrollbar-track { background: transparent; }
+    #feed-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+    /* ── Article card grid ── */
+    #feed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+
+    /* ── Feed article card ── */
+    .feed-card {
+      background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px; padding: 16px 18px;
+      display: flex; flex-direction: column; gap: 8px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .feed-card:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.10); }
+    .feed-card-meta { display: flex; align-items: center; gap: 8px; }
+    .feed-card-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .feed-card-source { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #475569; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .feed-card-age { font-size: 10px; color: #334155; flex-shrink: 0; }
+    .feed-card-title { font-size: 13.5px; font-weight: 600; color: #cbd5e1; line-height: 1.45; text-decoration: none; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .feed-card-title:hover { color: #f1f5f9; }
+    .feed-card-badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; align-self: flex-start; }
+
+    /* ── Feed card expand ── */
+    .feed-card-toggle-btn {
+      background: none; border: none; color: #334155; font-size: 10.5px;
+      cursor: pointer; padding: 0; align-self: flex-start; font-family: inherit;
+      transition: color 0.15s, transform 0.2s; line-height: 1;
+    }
+    .feed-card-toggle-btn:hover { color: #64748b; }
+    .feed-card.expanded .feed-card-toggle-btn { transform: rotate(180deg); color: #64748b; }
+    .feed-card-expand { overflow: hidden; max-height: 0; transition: max-height 0.32s cubic-bezier(0.4,0,0.2,1); }
+    .feed-card.expanded .feed-card-expand { max-height: 500px; }
+    .expand-summary { font-size: 12px; color: #94a3b8; line-height: 1.6; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 2px; }
+    .expand-entities-label { font-size: 9px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: #334155; margin-top: 10px; margin-bottom: 6px; }
+    .expand-entity-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
+    .expand-entity-tag { padding: 2px 9px; border-radius: 99px; font-size: 10px; font-weight: 600; border: 1px solid transparent; cursor: pointer; transition: filter 0.15s; }
+    .expand-entity-tag:hover { filter: brightness(1.3); }
+    .expand-loading { font-size: 11px; color: #334155; padding: 8px 0; }
+
+    /* ── Load more ── */
+    #feed-load-more-wrap { display: flex; justify-content: center; padding: 24px 0 8px; }
+    #feed-load-more { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; color: #64748b; font-size: 12px; font-weight: 600; padding: 8px 28px; cursor: pointer; font-family: inherit; transition: background 0.15s, color 0.15s; }
+    #feed-load-more:hover { background: rgba(255,255,255,0.08); color: #94a3b8; }
+    #feed-load-more:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── Feed state messages ── */
+    #feed-empty, #feed-spinner { text-align: center; padding: 48px 0; font-size: 13px; color: #334155; }
+  </style>
+</head>
+<body>
+
+<svg id="canvas"></svg>
+
+<!-- Feed view -->
+<div id="feed-view">
+  <div id="feed-pills-wrap">
+    <div id="feed-source-badge" style="display:none">
+      <button id="feed-back-btn">← Back to graph</button>
+      <span id="feed-source-label"></span>
+    </div>
+    <div id="feed-search-row">
+      <div id="feed-search-wrap">
+        <span id="feed-search-icon">⌕</span>
+        <input id="feed-search-input" type="search" placeholder="Search articles…" autocomplete="off" spellcheck="false">
+        <button id="feed-search-clear" style="display:none">×</button>
+      </div>
+    </div>
+    <div id="feed-pills"></div>
+  </div>
+  <div id="feed-scroll">
+    <div id="feed-grid"></div>
+    <div id="feed-load-more-wrap" style="display:none">
+      <button id="feed-load-more">Load more</button>
+    </div>
+    <div id="feed-empty" style="display:none">No articles found.</div>
+    <div id="feed-spinner" style="display:none">Loading…</div>
+  </div>
+</div>
+
+<div id="tip"></div>
+
+<!-- Signals sidebar -->
+<div id="signals-sidebar">
+  <div id="signals-sidebar-inner">
+    <div id="signals-sidebar-hdr">
+      <span id="signals-sidebar-title">TODAY'S SIGNALS</span>
+      <span id="signals-sidebar-badge"></span>
+    </div>
+    <div id="signals-sidebar-cards"></div>
+    <div id="signals-sidebar-empty">No signals — run extraction to generate.</div>
+  </div>
+  <button id="signals-sidebar-toggle" onclick="toggleSignalsSidebar()">‹</button>
+</div>
+
+<div id="header">
+  <div id="header-title">
+    <h1>Signal Atlas</h1>
+    <div class="sub">Live intelligence map</div>
+  </div>
+  <div id="graph-search-wrap">
+    <span id="graph-search-icon">⌕</span>
+    <input id="graph-search-input" type="search" placeholder="Filter graph…" autocomplete="off" spellcheck="false">
+    <button id="graph-search-clear" style="display:none">×</button>
+  </div>
+  <div id="view-toggle-wrap">
+    <button class="view-toggle-btn" id="view-toggle" onclick="switchView()">
+      <span id="view-toggle-icon">⊞</span>
+      <span id="view-toggle-label">Feed</span>
+    </button>
+  </div>
+  <div id="stats-panel"></div>
+</div>
+
+<div id="legend">
+  <div class="leg-section" id="topic-legend">
+    <div class="leg-title">Topics</div>
+  </div>
+  <div class="leg-section">
+    <div class="leg-title">Entities</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#60a5fa"></div>Person</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#c084fc"></div>Organization</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#4ade80"></div>Company</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#facc15"></div>Location</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#fb923c"></div>Product</div>
+  </div>
+  <div class="leg-section">
+    <div class="leg-title">Edge recency</div>
+    <div id="recency-bar"></div>
+    <div class="recency-labels"><span>old</span><span>now</span></div>
+  </div>
+</div>
+
+<div id="hint">scroll to zoom · drag to pan · click to explore</div>
+
+<!-- Article panel -->
+<div id="panel">
+  <div id="panel-head">
+    <div>
+      <div id="panel-badge"></div>
+      <div id="panel-title"></div>
+      <div id="panel-count"></div>
+    </div>
+    <button id="panel-close">×</button>
+  </div>
+  <div id="panel-body">
+    <div id="panel-loading">Loading…</div>
+  </div>
+</div>
+
+<!-- Ticker -->
+<div id="ticker">
+  <div id="ticker-label">LATEST</div>
+  <div id="ticker-track">
+    <div id="ticker-inner"></div>
+  </div>
+</div>
+
+<div id="loading-overlay">Loading graph…</div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+// ── Colours ────────────────────────────────────────────────
+const TOPIC_COLORS = {
+  technology:'#818cf8', business:'#34d399', science:'#fbbf24',
+  politics:'#f87171', health:'#f472b6', world:'#a78bfa',
+  sports:'#2dd4bf', entertainment:'#fb923c',
+};
+const ENTITY_COLORS = {
+  person:'#60a5fa', organization:'#c084fc', company:'#4ade80',
+  location:'#facc15', product:'#fb923c',
+};
+const tColor = n => TOPIC_COLORS[n] || '#94a3b8';
+const eColor = t => ENTITY_COLORS[t] || '#94a3b8';
+
+// ── Recency ────────────────────────────────────────────────
+function ageHours(isoStr) {
+  if (!isoStr) return Infinity;
+  return (Date.now() - new Date(isoStr)) / 3_600_000;
+}
+function recencyColor(isoStr) {
+  const h = ageHours(isoStr);
+  if (h < 2)  return '#ef4444';
+  if (h < 6)  return '#f97316';
+  if (h < 12) return '#eab308';
+  if (h < 24) return '#64748b';
+  return '#374151';
+}
+function timeAgo(isoStr) {
+  if (!isoStr) return '';
+  const h = ageHours(isoStr);
+  if (h < 1) return `${Math.round(h * 60)}m ago`;
+  if (h < 24) return `${Math.floor(h)}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+// ── Utility ────────────────────────────────────────────────
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+// ── Node size ──────────────────────────────────────────────
+function nodeR(d) {
+  if (d.group === 'topic') return Math.max(30, 22 + d.article_count * 2);
+  return Math.max(4, Math.min(20, 3 + d.article_count * 2.5));
+}
+
+// ── Global state ──────────────────────────────────────────
+// Feed
+let currentView     = 'graph';
+let feedInitialized = false;
+let feedTopic       = null;
+let feedSearch      = null;
+let feedPage        = 1;
+let feedTotal       = 0;
+let feedLoading     = false;
+let expandedCardId  = null;
+// Cross-view
+let feedEntrySource  = null;
+let graphTopicFilter = null;
+// Sidebar
+let signalsSidebarOpen = true;
+let signalsData        = [];
+// Graph refs (set after graph loads)
+let graphNodes     = null;
+let graphLinks     = null;
+let graphNeighbors = null;
+let graphConnLinks = null;
+
+// Apply initial sidebar state
+document.body.classList.add('sidebar-open');
+
+// ── SVG setup ─────────────────────────────────────────────
+const svg = d3.select('#canvas');
+const tip = document.getElementById('tip');
+const W = window.innerWidth, H = window.innerHeight;
+svg.attr('viewBox', [0, 0, W, H]);
+
+const defs = svg.append('defs');
+defs.append('radialGradient').attr('id', 'bg-vig')
+  .attr('cx','50%').attr('cy','50%').attr('r','70%')
+  .call(g => {
+    g.append('stop').attr('offset','0%').attr('stop-color','#0d1424').attr('stop-opacity', 0);
+    g.append('stop').attr('offset','100%').attr('stop-color','#020408').attr('stop-opacity', 0.8);
+  });
+svg.append('rect').attr('width',W).attr('height',H)
+  .attr('fill','url(#bg-vig)').style('pointer-events','none');
+
+const g = svg.append('g');
+svg.call(d3.zoom().scaleExtent([0.15, 5]).on('zoom', e => g.attr('transform', e.transform)));
+
+// ── Panel logic ────────────────────────────────────────────
+const panel = document.getElementById('panel');
+const panelBody = document.getElementById('panel-body');
+const panelBadge = document.getElementById('panel-badge');
+const panelTitle = document.getElementById('panel-title');
+const panelCount = document.getElementById('panel-count');
+document.getElementById('panel-close').onclick = closePanel;
+svg.on('click', closePanel);
+
+function closePanel() { panel.classList.remove('open'); }
+
+function openPanel(d) {
+  const isT = d.group === 'topic';
+  const color = isT ? tColor(d.label) : eColor(d.group);
+  const typeLabel = isT ? 'Topic' : d.group;
+  panelBadge.textContent = typeLabel;
+  panelBadge.style.cssText = `background:${color}22;color:${color};border:1px solid ${color}44`;
+  panelTitle.textContent = d.label;
+  panelCount.textContent = '';
+  panelBody.innerHTML = '<div id="panel-loading">Loading…</div>';
+  panel.classList.add('open');
+
+  const url = isT
+    ? `/articles?topic=${encodeURIComponent(d.label)}&page_size=12`
+    : `/entities/${d.id.replace('entity:', '')}/articles?page_size=12`;
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      const items = data.items || [];
+      panelCount.textContent = `${data.total} article${data.total !== 1 ? 's' : ''}`;
+      if (!items.length) {
+        panelBody.innerHTML = '<div id="panel-loading">No articles yet.</div>';
+        return;
+      }
+      panelBody.innerHTML = items.map(a => {
+        const heat = recencyColor(a.published_at);
+        const age  = timeAgo(a.published_at);
+        return `
+          <div class="article-card">
+            <div class="card-meta">
+              <div class="card-heat" style="background:${heat}"></div>
+              <span class="card-source">${a.source_name}</span>
+              <span class="card-age">${age}</span>
+            </div>
+            <a class="card-title" href="${a.url}" target="_blank" rel="noopener">${a.title}</a>
+          </div>`;
+      }).join('');
+      // View in Feed button
+      const feedLabel = isT ? d.label : null;
+      const footerEl = document.createElement('div');
+      footerEl.style.cssText = 'padding:12px 20px;border-top:1px solid rgba(255,255,255,0.05)';
+      const feedBtn = document.createElement('button');
+      feedBtn.className = 'panel-feed-btn';
+      feedBtn.textContent = '⊞ View in Feed';
+      feedBtn.addEventListener('click', () => {
+        navigateToFeedFromGraph(isT ? 'topic' : 'entity', d.label);
+      });
+      footerEl.appendChild(feedBtn);
+      panelBody.appendChild(footerEl);
+    })
+    .catch(() => { panelBody.innerHTML = '<div id="panel-loading">Failed to load.</div>'; });
+}
+
+// ── Ticker ─────────────────────────────────────────────────
+let tickerAnim = null;
+
+function buildTicker(items) {
+  const inner = document.getElementById('ticker-inner');
+  if (!items.length) return;
+  const makeItems = () => items.map(a => {
+    const heat = recencyColor(a.published_at);
+    const age  = timeAgo(a.published_at);
+    return `
+      <span class="ticker-item">
+        <span class="t-dot" style="background:${heat}"></span>
+        <span class="t-source">${a.source_name}</span>
+        <span class="t-title">${a.title}</span>
+        <span class="t-age">${age}</span>
+      </span>
+      <span class="ticker-sep">·</span>`;
+  }).join('');
+  inner.innerHTML = makeItems() + makeItems();
+  requestAnimationFrame(() => {
+    const fullW = inner.scrollWidth / 2;
+    let start = null;
+    const speed = 60;
+    if (tickerAnim) cancelAnimationFrame(tickerAnim);
+    function step(ts) {
+      if (!start) start = ts;
+      const x = ((ts - start) / 1000 * speed) % fullW;
+      inner.style.transform = `translateX(-${x}px)`;
+      tickerAnim = requestAnimationFrame(step);
+    }
+    tickerAnim = requestAnimationFrame(step);
+  });
+}
+
+function loadTicker() {
+  fetch('/articles?page_size=10')
+    .then(r => r.json())
+    .then(d => buildTicker(d.items || []));
+}
+loadTicker();
+setInterval(loadTicker, 30_000);
+
+// ── Signals sidebar ────────────────────────────────────────
+function toggleSignalsSidebar() {
+  signalsSidebarOpen = !signalsSidebarOpen;
+  document.body.classList.toggle('sidebar-open', signalsSidebarOpen);
+  document.getElementById('signals-sidebar-toggle').textContent = signalsSidebarOpen ? '‹' : '›';
+}
+
+function loadSignals() {
+  fetch('/brief')
+    .then(r => r.json())
+    .then(data => {
+      signalsData = (data.signals || []).filter(s => s.summary);
+      renderSignalsSidebar(signalsData);
+    })
+    .catch(() => {});
+}
+
+function renderSignalsSidebar(signals) {
+  const cardsEl = document.getElementById('signals-sidebar-cards');
+  const badge   = document.getElementById('signals-sidebar-badge');
+  const empty   = document.getElementById('signals-sidebar-empty');
+
+  if (!signals.length) {
+    cardsEl.innerHTML = '';
+    badge.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+
+  badge.textContent   = `${signals.length}`;
+  badge.style.display = 'inline';
+  empty.style.display = 'none';
+
+  cardsEl.innerHTML = signals.map((s, i) => {
+    const score   = s.score || 0;
+    const tier    = score >= 0.8 ? 'urgency-red' : score >= 0.6 ? 'urgency-orange' : score >= 0.4 ? 'urgency-yellow' : 'urgency-muted';
+    const subject = (s.entity_name || s.topic_name || '—').replace(/</g, '&lt;');
+    const type    = (s.signal_type || '').replace(/_/g, ' ');
+    const summary = (s.summary || '').replace(/</g, '&lt;');
+    return `
+      <div class="signal-card-v2 ${tier}" data-signal-idx="${i}">
+        <div class="sig2-type">${type}</div>
+        <div class="sig2-subject" title="${subject}">${subject}</div>
+        <div class="sig2-summary">${summary}</div>
+        <div class="sig2-score-row">
+          <div class="sig2-bar-wrap"><div class="sig2-bar" style="width:${Math.round(score * 100)}%"></div></div>
+          <span class="sig2-score-num">${score.toFixed(2)}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  cardsEl.querySelectorAll('.signal-card-v2').forEach(el => {
+    el.addEventListener('click', () => {
+      const s = signalsData[+el.dataset.signalIdx];
+      if (s) onSignalCardClick(s);
+    });
+  });
+}
+
+function onSignalCardClick(s) {
+  if (s.entity_name) {
+    if (currentView !== 'feed') switchView('feed');
+    setFeedSearch(s.entity_name);
+  } else if (s.topic_name) {
+    if (currentView !== 'feed') switchView('feed');
+    selectFeedTopic(s.topic_name);
+  }
+}
+
+loadSignals();
+setInterval(loadSignals, 60_000);
+
+// ── Main graph ─────────────────────────────────────────────
+fetch('/graph')
+  .then(r => r.json())
+  .then(({ nodes, links, meta }) => {
+    document.getElementById('loading-overlay').remove();
+
+    document.getElementById('stats-panel').innerHTML = [
+      `<div class="stat"><b>${meta.extracted_articles}</b> extracted</div>`,
+      `<div class="stat"><b>${meta.total_articles}</b> total</div>`,
+      `<div class="stat"><b>${nodes.filter(n=>n.group==='topic').length}</b> topics · <b>${nodes.filter(n=>n.group!=='topic').length}</b> entities</div>`,
+    ].join('');
+
+    const topicLeg = document.getElementById('topic-legend');
+    nodes.filter(n => n.group === 'topic')
+      .sort((a,b) => b.article_count - a.article_count)
+      .forEach(t => {
+        topicLeg.insertAdjacentHTML('beforeend',
+          `<div class="leg-item"><div class="leg-dot" style="background:${tColor(t.label)}"></div>${t.label}</div>`);
+      });
+
+    nodes.filter(n => n.group === 'topic').forEach(n => {
+      const c = d3.color(tColor(n.label));
+      defs.append('radialGradient').attr('id', `grad-${n.id}`)
+        .attr('cx','35%').attr('cy','30%').attr('r','70%')
+        .call(g => {
+          g.append('stop').attr('offset','0%').attr('stop-color', c.brighter(1.0).formatHex());
+          g.append('stop').attr('offset','100%').attr('stop-color', c.darker(0.6).formatHex());
+        });
+    });
+
+    const neighbors    = new Map(nodes.map(n => [n.id, new Set()]));
+    const connLinks    = new Map(nodes.map(n => [n.id, []]));
+    links.forEach((l, i) => {
+      const sid = typeof l.source === 'object' ? l.source.id : l.source;
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      neighbors.get(sid)?.add(tid);
+      neighbors.get(tid)?.add(sid);
+      connLinks.get(sid)?.push(i);
+      connLinks.get(tid)?.push(i);
+    });
+
+    // Store refs at module scope
+    graphNeighbors = neighbors;
+    graphConnLinks = connLinks;
+
+    const sim = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links).id(d => d.id)
+        .distance(d => 90 + 50 / Math.max(d.value, 1)).strength(0.35))
+      .force('charge', d3.forceManyBody()
+        .strength(d => d.group === 'topic' ? -900 : -100))
+      .force('collide', d3.forceCollide().radius(d => nodeR(d) + 5).strength(0.8))
+      .force('center', d3.forceCenter(W / 2, H / 2).strength(0.03))
+      .force('x', d3.forceX(W / 2).strength(0.04))
+      .force('y', d3.forceY(H / 2).strength(0.04));
+
+    const linkSel = g.append('g').selectAll('line').data(links).join('line')
+      .attr('class', 'link')
+      .attr('stroke', d => recencyColor(d.latest_at))
+      .attr('stroke-opacity', 0.45)
+      .attr('stroke-width', d => Math.max(0.4, Math.min(d.value * 0.7, 2.5)));
+
+    const nodeSel = g.append('g').selectAll('g').data(nodes).join('g')
+      .attr('class', d => `node-${d.group === 'topic' ? 'topic' : 'entity'}`)
+      .on('click', (e, d) => { e.stopPropagation(); openPanel(d); })
+      .call(d3.drag()
+        .on('start', (e,d) => { if (!e.active) sim.alphaTarget(0.25).restart(); d.fx=d.x; d.fy=d.y; })
+        .on('drag',  (e,d) => { d.fx=e.x; d.fy=e.y; })
+        .on('end',   (e,d) => { if (!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; })
+      );
+
+    // Store D3 selections at module scope
+    graphNodes = nodeSel;
+    graphLinks = linkSel;
+
+    nodeSel.filter(d => ageHours(d.latest_at) < 2)
+      .append('circle')
+      .attr('class', 'pulse')
+      .attr('fill', 'none')
+      .attr('stroke', d => d.group === 'topic' ? tColor(d.label) : '#ef4444')
+      .attr('stroke-width', 1.5)
+      .style('--pr', d => `${nodeR(d)}px`)
+      .style('--pr-end', d => `${nodeR(d) + 14}px`);
+
+    nodeSel.append('circle')
+      .attr('r', nodeR)
+      .attr('fill', d => d.group === 'topic' ? `url(#grad-${d.id})` : eColor(d.group))
+      .attr('stroke', d => d.group === 'topic' ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.05)')
+      .attr('stroke-width', d => d.group === 'topic' ? 1.5 : 0.5);
+
+    nodeSel.filter(d => d.group === 'topic')
+      .append('circle')
+      .attr('r', d => nodeR(d) + 7)
+      .attr('fill', 'none')
+      .attr('stroke', d => {
+        const tc = d3.color(tColor(d.label));
+        const rc = d3.color(recencyColor(d.latest_at));
+        return d3.interpolateRgb(tc.formatHex(), rc.formatHex())(0.35);
+      })
+      .attr('stroke-width', 1)
+      .attr('stroke-opacity', 0.3);
+
+    nodeSel.filter(d => d.group !== 'topic')
+      .append('circle')
+      .attr('r', 2.5)
+      .attr('cx', d => nodeR(d) * 0.65)
+      .attr('cy', d => -nodeR(d) * 0.65)
+      .attr('fill', d => recencyColor(d.latest_at))
+      .attr('stroke', '#060a14')
+      .attr('stroke-width', 1);
+
+    nodeSel.filter(d => d.group === 'topic' || d.article_count >= 2)
+      .append('text')
+      .attr('class', d => d.group === 'topic' ? 'label-topic' : 'label-entity')
+      .attr('dy', d => d.group === 'topic' ? '0.35em' : `-${nodeR(d) + 5}px`)
+      .text(d => d.label);
+
+    nodeSel
+      .on('mouseenter', (e, d) => {
+        const linked = new Set(connLinks.get(d.id) || []);
+        linkSel
+          .classed('dim', (_, i) => !linked.has(i))
+          .classed('highlight', (_, i) => linked.has(i));
+        nodeSel.style('opacity', n => (n.id === d.id || neighbors.get(d.id)?.has(n.id)) ? 1 : 0.25);
+
+        const color = d.group === 'topic' ? tColor(d.label) : eColor(d.group);
+        const typeLabel = d.group === 'topic' ? 'Topic' : d.group;
+        const rc = recencyColor(d.latest_at);
+        const age = timeAgo(d.latest_at);
+        tip.innerHTML = `
+          <span class="tip-badge" style="background:${color}22;color:${color};border:1px solid ${color}44">${typeLabel}</span>
+          <div class="tip-name">${d.label}</div>
+          <div class="tip-row"><b>${d.article_count}</b> article${d.article_count !== 1 ? 's' : ''}</div>
+          ${age ? `<div class="tip-row"><span class="tip-heat" style="background:${rc}"></span>Latest ${age}</div>` : ''}
+          <div class="tip-row" style="margin-top:5px;color:#334155;font-size:11px">Click to see headlines →</div>
+        `;
+        tip.classList.add('show');
+      })
+      .on('mousemove', e => {
+        tip.style.left = `${Math.min(e.clientX + 16, W - 250)}px`;
+        tip.style.top  = `${Math.max(e.clientY - 12, 8)}px`;
+      })
+      .on('mouseleave', () => {
+        linkSel.classed('dim', false).classed('highlight', false);
+        nodeSel.style('opacity', 1);
+        tip.classList.remove('show');
+      });
+
+    sim.on('tick', () => {
+      linkSel
+        .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+      nodeSel.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+
+    setTimeout(() => sim.alphaDecay(0.025), 3000);
+  })
+  .catch(() => {
+    document.getElementById('loading-overlay').textContent = 'Could not load graph data.';
+  });
+
+// ── Graph search ───────────────────────────────────────────
+function applyGraphSearch(query) {
+  if (!graphNodes || !graphLinks) return;
+  if (!query) {
+    graphNodes.style('opacity', 1);
+    graphLinks.classed('dim', false).classed('highlight', false);
+    return;
+  }
+  const q = query.toLowerCase();
+  graphNodes.style('opacity', d => d.label.toLowerCase().includes(q) ? 1 : 0.07);
+  graphLinks.classed('dim', d => {
+    const s = typeof d.source === 'object' ? d.source : {};
+    const t = typeof d.target === 'object' ? d.target : {};
+    return !((s.label || '').toLowerCase().includes(q) || (t.label || '').toLowerCase().includes(q));
+  });
+}
+
+const graphSearchInput = document.getElementById('graph-search-input');
+const graphSearchClear = document.getElementById('graph-search-clear');
+const debouncedGraphSearch = debounce(q => applyGraphSearch(q), 250);
+
+graphSearchInput.addEventListener('input', e => {
+  const q = e.target.value;
+  graphSearchClear.style.display = q ? 'block' : 'none';
+  debouncedGraphSearch(q);
+});
+graphSearchClear.addEventListener('click', () => {
+  graphSearchInput.value = '';
+  graphSearchClear.style.display = 'none';
+  applyGraphSearch(null);
+});
+
+// ── Feed view ──────────────────────────────────────────────
+function switchView(target) {
+  const goTo = target || (currentView === 'graph' ? 'feed' : 'graph');
+  if (goTo === currentView) return;
+  currentView = goTo;
+  document.body.classList.toggle('view-feed', currentView === 'feed');
+  const label = document.getElementById('view-toggle-label');
+  const icon  = document.getElementById('view-toggle-icon');
+  if (currentView === 'feed') {
+    label.textContent = 'Graph';
+    icon.textContent  = '◎';
+    closePanel();
+    if (!feedInitialized) initFeedView();
+  } else {
+    label.textContent = 'Feed';
+    icon.textContent  = '⊞';
+    // Restore any active graph topic filter
+    if (graphTopicFilter) highlightGraphTopic(graphTopicFilter);
+  }
+}
+
+function initFeedView() {
+  feedInitialized = true;
+  fetch('/topics')
+    .then(r => r.json())
+    .then(data => renderPills(data.items || []))
+    .catch(() => {});
+  loadFeedArticles(true);
+
+  document.getElementById('feed-load-more').addEventListener('click', () => {
+    if (!feedLoading) loadFeedArticles(false);
+  });
+  document.getElementById('feed-back-btn').addEventListener('click', () => {
+    clearFeedSource();
+    selectFeedTopic(null);
+    switchView('graph');
+  });
+
+  const feedSearchInput = document.getElementById('feed-search-input');
+  const feedSearchClear = document.getElementById('feed-search-clear');
+  const debouncedFeedSearch = debounce(q => setFeedSearch(q || null), 250);
+
+  feedSearchInput.addEventListener('input', e => {
+    const q = e.target.value;
+    feedSearchClear.style.display = q ? 'block' : 'none';
+    debouncedFeedSearch(q);
+  });
+  feedSearchClear.addEventListener('click', () => {
+    feedSearchInput.value = '';
+    feedSearchClear.style.display = 'none';
+    setFeedSearch(null);
+  });
+}
+
+function renderPills(topics) {
+  const container = document.getElementById('feed-pills');
+  const allPill = makePill('All', null, true);
+  container.appendChild(allPill);
+  topics.forEach(t => container.appendChild(makePill(t.name, t.name, false)));
+}
+
+function makePill(label, topicValue, isActive) {
+  const btn = document.createElement('button');
+  btn.className = 'feed-pill';
+  btn.textContent = label;
+  if (isActive) applyActivePill(btn, topicValue);
+  btn.addEventListener('click', () => selectFeedTopic(topicValue));
+  return btn;
+}
+
+function selectFeedTopic(topicValue, fromGraph) {
+  if (!fromGraph) clearFeedSource();
+  feedTopic  = topicValue;
+  feedSearch = null;
+  const input = document.getElementById('feed-search-input');
+  const clear = document.getElementById('feed-search-clear');
+  const wrap  = document.getElementById('feed-pills-wrap');
+  if (input) input.value = '';
+  if (clear) clear.style.display = 'none';
+  if (wrap)  wrap.classList.remove('has-search');
+
+  document.querySelectorAll('.feed-pill').forEach(p => {
+    const isThis = p.textContent.toLowerCase() === (topicValue || 'all').toLowerCase();
+    if (isThis) applyActivePill(p, topicValue);
+    else p.style.cssText = '';
+  });
+
+  graphTopicFilter = topicValue;
+  loadFeedArticles(true);
+}
+
+function applyActivePill(el, topicValue) {
+  const color = topicValue ? tColor(topicValue.toLowerCase()) : '#94a3b8';
+  const c = d3.color(color);
+  el.style.color       = color;
+  el.style.borderColor = c.copy({opacity: 0.45}).formatRgb();
+  el.style.background  = c.copy({opacity: 0.12}).formatRgb();
+}
+
+function setFeedSearch(query) {
+  feedSearch = query ? query.trim() : null;
+  const input = document.getElementById('feed-search-input');
+  const clear = document.getElementById('feed-search-clear');
+  const wrap  = document.getElementById('feed-pills-wrap');
+  if (input) input.value = feedSearch || '';
+  if (clear) clear.style.display = feedSearch ? 'block' : 'none';
+  if (wrap)  wrap.classList.toggle('has-search', !!feedSearch);
+  if (feedSearch) {
+    feedTopic = null;
+    document.querySelectorAll('.feed-pill').forEach(p => { p.style.cssText = ''; });
+  }
+  loadFeedArticles(true);
+}
+
+function loadFeedArticles(reset) {
+  if (feedLoading) return;
+  feedLoading = true;
+
+  if (reset) {
+    feedPage       = 1;
+    feedTotal      = 0;
+    expandedCardId = null;
+    document.getElementById('feed-grid').innerHTML = '';
+    document.getElementById('feed-load-more-wrap').style.display = 'none';
+    document.getElementById('feed-empty').style.display = 'none';
+  }
+
+  document.getElementById('feed-spinner').style.display = 'block';
+
+  let url = `/articles?page_size=12&page=${feedPage}`;
+  if (feedTopic)  url += `&topic=${encodeURIComponent(feedTopic)}`;
+  if (feedSearch) url += `&q=${encodeURIComponent(feedSearch)}`;
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      feedTotal = data.total || 0;
+      const items = data.items || [];
+      document.getElementById('feed-spinner').style.display = 'none';
+
+      if (items.length === 0 && feedPage === 1) {
+        document.getElementById('feed-empty').style.display = 'block';
+        return;
+      }
+
+      renderFeedCards(items);
+      feedPage++;
+
+      const rendered = document.getElementById('feed-grid').children.length;
+      const moreWrap = document.getElementById('feed-load-more-wrap');
+      if (rendered < feedTotal) {
+        moreWrap.style.display = 'flex';
+        document.getElementById('feed-load-more').disabled = false;
+      } else {
+        moreWrap.style.display = 'none';
+      }
+    })
+    .catch(() => { document.getElementById('feed-spinner').style.display = 'none'; })
+    .finally(() => { feedLoading = false; });
+}
+
+function renderFeedCards(items) {
+  const grid = document.getElementById('feed-grid');
+  items.forEach(a => {
+    const dot   = recencyColor(a.published_at);
+    const age   = timeAgo(a.published_at);
+    const cat   = (a.category || '').toLowerCase();
+    const color = tColor(cat);
+    const title = (a.title || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const src   = (a.source_name || '').replace(/</g,'&lt;');
+
+    const card = document.createElement('div');
+    card.className = 'feed-card';
+    card.dataset.articleId = a.id;
+    card.dataset.summary   = a.summary || '';
+
+    card.innerHTML = `
+      <div class="feed-card-meta">
+        <div class="feed-card-dot" style="background:${dot}"></div>
+        <span class="feed-card-source">${src}</span>
+        <span class="feed-card-age">${age}</span>
+      </div>
+      <a class="feed-card-title" href="${a.url}" target="_blank" rel="noopener">${title}</a>
+      ${cat ? `<span class="feed-card-badge" style="background:${color}22;color:${color};border:1px solid ${color}44">${cat}</span>` : ''}
+      <button class="feed-card-toggle-btn">▾ Summary</button>
+      <div class="feed-card-expand"></div>`;
+
+    card.querySelector('.feed-card-toggle-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      toggleFeedCard(card, a.id);
+    });
+    card.querySelector('.feed-card-title').addEventListener('click', e => e.stopPropagation());
+    grid.appendChild(card);
+  });
+}
+
+function toggleFeedCard(cardEl, articleId) {
+  if (expandedCardId === articleId) {
+    cardEl.classList.remove('expanded');
+    expandedCardId = null;
+    return;
+  }
+  if (expandedCardId !== null) {
+    const prev = document.querySelector(`.feed-card[data-article-id="${expandedCardId}"]`);
+    if (prev) prev.classList.remove('expanded');
+  }
+  expandedCardId = articleId;
+  cardEl.classList.add('expanded');
+  const expandEl = cardEl.querySelector('.feed-card-expand');
+  if (!expandEl.hasChildNodes()) loadCardDetail(cardEl, articleId);
+}
+
+function loadCardDetail(cardEl, articleId) {
+  const expandEl = cardEl.querySelector('.feed-card-expand');
+  const stored   = cardEl.dataset.summary;
+  expandEl.innerHTML = stored
+    ? `<div class="expand-summary">${stored.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div><div class="expand-loading" style="font-size:10px;padding-top:6px;color:#1e293b">Loading entities…</div>`
+    : '<div class="expand-loading">Loading…</div>';
+
+  fetch(`/articles/${articleId}`)
+    .then(r => r.json())
+    .then(detail => {
+      const summary  = (detail.summary || stored || 'No summary available.').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const entities = detail.entities || [];
+      const tagsHtml = entities.length
+        ? `<div class="expand-entities-label">Entities</div>
+           <div class="expand-entity-tags">${entities.map(e => {
+             const col  = eColor(e.entity_type);
+             const name = (e.name || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+             return `<span class="expand-entity-tag" style="color:${col};border-color:${col}44;background:${col}18" data-name="${name}">${name}</span>`;
+           }).join('')}</div>`
+        : '';
+      expandEl.innerHTML = `<div class="expand-summary">${summary}</div>${tagsHtml}`;
+      expandEl.querySelectorAll('.expand-entity-tag').forEach(tag => {
+        tag.addEventListener('click', e => {
+          e.stopPropagation();
+          setFeedSearch(tag.dataset.name);
+        });
+      });
+    })
+    .catch(() => {
+      if (!expandEl.querySelector('.expand-summary')) {
+        expandEl.innerHTML = '<div class="expand-loading">Failed to load detail.</div>';
+      }
+    });
+}
+
+// ── Cross-view sync ────────────────────────────────────────
+function navigateToFeedFromGraph(type, value) {
+  feedEntrySource = { type, value };
+  if (currentView !== 'feed') switchView('feed');
+  if (type === 'topic') {
+    selectFeedTopic(value, true);
+  } else {
+    setFeedSearch(value);
+  }
+  const badge = document.getElementById('feed-source-badge');
+  const lbl   = document.getElementById('feed-source-label');
+  if (badge) {
+    badge.style.display = 'flex';
+    lbl.textContent = type === 'topic' ? `Topic: ${value}` : `Entity: ${value}`;
+  }
+}
+
+function clearFeedSource() {
+  feedEntrySource = null;
+  const badge = document.getElementById('feed-source-badge');
+  if (badge) badge.style.display = 'none';
+}
+
+function highlightGraphTopic(topicName) {
+  if (!graphNodes || !graphNeighbors) return;
+  graphTopicFilter = topicName;
+  if (!topicName) {
+    graphNodes.style('opacity', 1);
+    graphLinks.classed('dim', false).classed('highlight', false);
+    return;
+  }
+  const topicNode = graphNodes.data().find(n => n.group === 'topic' && n.label === topicName);
+  if (!topicNode) return;
+  const connected = graphNeighbors.get(topicNode.id) || new Set();
+  graphNodes.style('opacity', d => {
+    if (d.id === topicNode.id || connected.has(d.id)) return 1;
+    return 0.06;
+  });
+  graphLinks.classed('dim', d => {
+    const sid = typeof d.source === 'object' ? d.source.id : d.source;
+    const tid = typeof d.target === 'object' ? d.target.id : d.target;
+    return sid !== topicNode.id && tid !== topicNode.id;
+  });
+}
+</script>
+</body>
+</html>

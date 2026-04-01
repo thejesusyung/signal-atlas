@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import json
 import uuid
 from datetime import datetime
 
@@ -18,7 +19,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.types import CHAR, TypeDecorator
 
@@ -45,6 +46,50 @@ class GUID(TypeDecorator):
         if isinstance(value, uuid.UUID):
             return value
         return uuid.UUID(str(value))
+
+
+class VectorType(TypeDecorator):
+    """Cross-dialect vector column.
+
+    On PostgreSQL: delegates to pgvector's Vector type for native storage and
+    indexed cosine-distance queries via the ``<=>`` operator.
+    On SQLite (tests): stores as JSON text, exactly like the previous Text column.
+    """
+
+    impl = Text
+    cache_ok = True
+
+    def __init__(self, dim: int = 384) -> None:
+        super().__init__()
+        self.dim = dim
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            from pgvector.sqlalchemy import Vector
+            return dialect.type_descriptor(Vector(self.dim))
+        return dialect.type_descriptor(Text())
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if dialect.name == "postgresql":
+            # pgvector accepts a plain Python list directly
+            if hasattr(value, "tolist"):
+                return value.tolist()
+            return list(value)
+        # SQLite: store as JSON text
+        if hasattr(value, "tolist"):
+            return json.dumps(value.tolist())
+        return json.dumps(list(value))
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if dialect.name == "postgresql":
+            # pgvector returns a list already; return as-is for callers to wrap
+            return value
+        # SQLite: deserialise from JSON text
+        return json.loads(value)
 
 
 Base = declarative_base()
@@ -101,6 +146,9 @@ class RawArticle(Base):
         nullable=False,
     )
     duplicate_of = Column(GUID(), ForeignKey("raw_articles.id", ondelete="SET NULL"))
+    embedding = Column(VectorType(dim=384), nullable=True)
+    semantic_cluster_id = Column(Integer, nullable=True)
+    cluster_label = Column(String(200), nullable=True)
 
     entities = relationship("ArticleEntity", back_populates="article", cascade="all, delete-orphan")
     topics = relationship("ArticleTopic", back_populates="article", cascade="all, delete-orphan")
@@ -182,6 +230,25 @@ class ExtractionRun(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     article = relationship("RawArticle", back_populates="extraction_runs")
+
+
+class Signal(Base):
+    __tablename__ = "signals"
+    __table_args__ = (
+        Index("ix_signals_detected_at", "detected_at"),
+        Index("ix_signals_entity_id", "entity_id"),
+    )
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    entity_id = Column(GUID(), ForeignKey("entities.id", ondelete="SET NULL"), nullable=True)
+    topic_name = Column(String(200), nullable=True)
+    signal_type = Column(String(50), nullable=False)
+    score = Column(Float, nullable=False)
+    summary = Column(Text, nullable=True)
+    detected_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    article_ids = Column(JSONB, nullable=False, default=list)
+
+    entity = relationship("Entity", foreign_keys=[entity_id])
 
 
 class LLMRateLimitReservation(Base):
