@@ -17,7 +17,8 @@ from news_pipeline.db.models import (
     TopicMethod,
 )
 from news_pipeline.extraction.errors import ExtractionStepError
-from news_pipeline.llm.prompts import JSON_REPAIR_PROMPT, TOPIC_CLASSIFICATION_PROMPT, parse_json_payload
+from news_pipeline.llm.prompts import JSON_REPAIR_PROMPT, TOPIC_CLASSIFICATION_PROMPT, PromptSpec, parse_json_payload
+from news_pipeline.tracking.prompt_registry import get_prompt_template
 from news_pipeline.llm.provider import LLMProvider, LLMTraceContext
 from news_pipeline.utils import (
     DEFAULT_LLM_ARTICLE_TEXT_CHARS,
@@ -30,6 +31,12 @@ class TopicExtractor:
     def __init__(self, provider: LLMProvider) -> None:
         self.provider = provider
         self.topic_labels = get_settings().topic_names
+        self._prompt = PromptSpec(
+            name=TOPIC_CLASSIFICATION_PROMPT.name,
+            version=TOPIC_CLASSIFICATION_PROMPT.version,
+            system_prompt=TOPIC_CLASSIFICATION_PROMPT.system_prompt,
+            user_prompt_template=get_prompt_template("topic_classification", TOPIC_CLASSIFICATION_PROMPT),
+        )
 
     def extract_for_article(self, session: Session, article: RawArticle) -> list[TopicAssignment]:
         article_text = choose_article_text(
@@ -40,7 +47,7 @@ class TopicExtractor:
             max_chars=DEFAULT_LLM_ARTICLE_TEXT_CHARS,
             summary_max_chars=DEFAULT_LLM_SUMMARY_TEXT_CHARS,
         )
-        system_prompt, prompt = TOPIC_CLASSIFICATION_PROMPT.render(
+        system_prompt, prompt = self._prompt.render(
             title=article.title,
             article_text=article_text,
             topic_labels=self.topic_labels,
@@ -53,7 +60,7 @@ class TopicExtractor:
         primary_trace_context = LLMTraceContext(
             operation="topic_classification",
             article_id=str(article.id),
-            prompt_version=TOPIC_CLASSIFICATION_PROMPT.version,
+            prompt_version=self._prompt.version,
             article_title=article.title,
         )
         try:
@@ -87,7 +94,7 @@ class TopicExtractor:
                 run_type=ExtractionRunType.topic,
                 llm_provider=response.provider_name if response else self.provider.provider_name,
                 model_name=response.model if response else getattr(self.provider, "model", "unknown"),
-                prompt_version=TOPIC_CLASSIFICATION_PROMPT.version,
+                prompt_version=self._prompt.version,
                 tokens_used=response.tokens_used if response else 0,
                 latency_ms=response.latency_ms if response else 0,
                 error_message=error_message or "Topic extraction failed",
@@ -99,7 +106,7 @@ class TopicExtractor:
                 run_type=ExtractionRunType.topic,
                 llm_provider=response.provider_name if response else self.provider.provider_name,
                 model_name=response.model if response else getattr(self.provider, "model", "unknown"),
-                prompt_version=TOPIC_CLASSIFICATION_PROMPT.version,
+                prompt_version=self._prompt.version,
                 tokens_used=response.tokens_used if response else 0,
                 latency_ms=response.latency_ms if response else 0,
                 success=True,

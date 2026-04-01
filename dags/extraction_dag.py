@@ -4,6 +4,8 @@ import logging
 from datetime import datetime
 from uuid import UUID
 
+import mlflow
+
 from airflow.decorators import dag, task
 
 from news_pipeline.config import get_settings
@@ -61,7 +63,16 @@ def build_extraction_dag():
                     "tokens_used": sum(item["tokens"] for item in processed),
                 }
             )
-            log_dict_artifact({"results": processed}, "extraction_batch.json")
+            mlflow.log_table(
+                data={
+                    "article_id":  [r["article_id"] for r in processed],
+                    "status":      [r["status"]     for r in processed],
+                    "entities":    [r["entities"]   for r in processed],
+                    "topics":      [r["topics"]     for r in processed],
+                    "tokens_used": [r["tokens"]     for r in processed],
+                },
+                artifact_file="extraction_batch.json",
+            )
 
     @task
     def embed_articles() -> dict:
@@ -152,12 +163,27 @@ def build_extraction_dag():
         """Detect anomalous entity/topic velocity and generate LLM briefs."""
         from news_pipeline.signals.detector import detect_and_persist_signals
 
+        settings = get_settings()
         provider = GroqProvider()
         with session_scope() as session:
-            signals = detect_and_persist_signals(session, provider)
+            with tracked_run(
+                experiment_name=settings.mlflow_experiment_signals,
+                run_name="signal_detection",
+                params={"provider": provider.provider_name},
+                tags={"tracking_scope": "signal_detection", "dag_id": "extraction_dag"},
+            ):
+                signals = detect_and_persist_signals(session, provider)
+                log_metrics({"signals_generated": len(signals)})
+
         LOGGER.info("Generated %d signals", len(signals))
         return {"signals_generated": len(signals)}
 
+    @task
+    def register_prompts() -> None:
+        from news_pipeline.tracking.prompt_registry import register_all_prompts
+        register_all_prompts()
+
+    registered = register_prompts()
     article_ids = fetch_pending_article_ids()
     processed = process_article.expand(article_id=article_ids)
     logged = log_batch(processed)
@@ -165,6 +191,7 @@ def build_extraction_dag():
     clustered = cluster_articles()
     signaled = generate_signals()
 
+    registered >> article_ids
     logged >> embedded >> clustered >> signaled
 
 

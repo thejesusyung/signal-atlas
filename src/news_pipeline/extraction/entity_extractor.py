@@ -16,7 +16,8 @@ from news_pipeline.db.models import (
     RawArticle,
 )
 from news_pipeline.extraction.errors import ExtractionStepError
-from news_pipeline.llm.prompts import ENTITY_EXTRACTION_PROMPT, JSON_REPAIR_PROMPT, parse_json_payload
+from news_pipeline.llm.prompts import ENTITY_EXTRACTION_PROMPT, JSON_REPAIR_PROMPT, PromptSpec, parse_json_payload
+from news_pipeline.tracking.prompt_registry import get_prompt_template
 from news_pipeline.llm.provider import LLMProvider, LLMTraceContext
 from news_pipeline.utils import (
     DEFAULT_LLM_ARTICLE_TEXT_CHARS,
@@ -44,6 +45,12 @@ MIN_ENTITY_CONFIDENCE = 0.01
 class EntityExtractor:
     def __init__(self, provider: LLMProvider) -> None:
         self.provider = provider
+        self._prompt = PromptSpec(
+            name=ENTITY_EXTRACTION_PROMPT.name,
+            version=ENTITY_EXTRACTION_PROMPT.version,
+            system_prompt=ENTITY_EXTRACTION_PROMPT.system_prompt,
+            user_prompt_template=get_prompt_template("entity_extraction", ENTITY_EXTRACTION_PROMPT),
+        )
 
     def extract_for_article(self, session: Session, article: RawArticle) -> list[EntityRecord]:
         article_text = choose_article_text(
@@ -54,7 +61,7 @@ class EntityExtractor:
             max_chars=DEFAULT_LLM_ARTICLE_TEXT_CHARS,
             summary_max_chars=DEFAULT_LLM_SUMMARY_TEXT_CHARS,
         )
-        system_prompt, prompt = ENTITY_EXTRACTION_PROMPT.render(
+        system_prompt, prompt = self._prompt.render(
             title=article.title,
             article_text=article_text,
         )
@@ -66,7 +73,7 @@ class EntityExtractor:
         primary_trace_context = LLMTraceContext(
             operation="entity_extraction",
             article_id=str(article.id),
-            prompt_version=ENTITY_EXTRACTION_PROMPT.version,
+            prompt_version=self._prompt.version,
             article_title=article.title,
         )
 
@@ -104,7 +111,7 @@ class EntityExtractor:
                 run_type=ExtractionRunType.entity,
                 llm_provider=response.provider_name if response else self.provider.provider_name,
                 model_name=response.model if response else getattr(self.provider, "model", "unknown"),
-                prompt_version=ENTITY_EXTRACTION_PROMPT.version,
+                prompt_version=self._prompt.version,
                 tokens_used=response.tokens_used if response else 0,
                 latency_ms=response.latency_ms if response else 0,
                 error_message=error_message or "Entity extraction failed",
@@ -116,6 +123,7 @@ class EntityExtractor:
             response=response,
             success=True,
             error_message=None,
+            prompt_version=self._prompt.version,
         )
         return records
 
@@ -255,6 +263,7 @@ class EntityExtractor:
         response,
         success: bool,
         error_message: str | None,
+        prompt_version: str = ENTITY_EXTRACTION_PROMPT.version,
     ) -> None:
         session.add(
             ExtractionRun(
@@ -262,7 +271,7 @@ class EntityExtractor:
                 run_type=ExtractionRunType.entity,
                 llm_provider=response.provider_name if response else "groq",
                 model_name=response.model if response else "unknown",
-                prompt_version=ENTITY_EXTRACTION_PROMPT.version,
+                prompt_version=prompt_version,
                 tokens_used=response.tokens_used if response else 0,
                 latency_ms=response.latency_ms if response else 0,
                 success=success,

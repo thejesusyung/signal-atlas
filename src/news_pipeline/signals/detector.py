@@ -262,7 +262,14 @@ def _get_article_titles(session: Session, article_ids: list[str]) -> list[str]:
 
 def _generate_summary(provider: LLMProvider, candidate: dict, settings) -> str:
     try:
-        system_prompt, user_prompt = SIGNAL_BRIEF_PROMPT.render(
+        from news_pipeline.tracking.prompt_registry import get_prompt_template
+        prompt = PromptSpec(
+            name=SIGNAL_BRIEF_PROMPT.name,
+            version=SIGNAL_BRIEF_PROMPT.version,
+            system_prompt=SIGNAL_BRIEF_PROMPT.system_prompt,
+            user_prompt_template=get_prompt_template("signal_brief", SIGNAL_BRIEF_PROMPT),
+        )
+        system_prompt, user_prompt = prompt.render(
             signal_type=candidate["signal_type"].replace("_", " "),
             subject_name=candidate["subject_name"],
             score=candidate["score"],
@@ -271,7 +278,7 @@ def _generate_summary(provider: LLMProvider, candidate: dict, settings) -> str:
         trace = LLMTraceContext(
             operation="signal_brief",
             article_id=None,
-            prompt_version=SIGNAL_BRIEF_PROMPT.version,
+            prompt_version=prompt.version,
         )
         response = provider.complete(
             prompt=user_prompt,
