@@ -48,6 +48,36 @@ class GUID(TypeDecorator):
         return uuid.UUID(str(value))
 
 
+class JSONBList(TypeDecorator):
+    """Cross-dialect JSONB list column.
+
+    On PostgreSQL: uses native JSONB for indexed JSON storage.
+    On SQLite (tests): stores as JSON text.
+    """
+
+    impl = Text
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(JSONB())
+        return dialect.type_descriptor(Text())
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if dialect.name == "postgresql":
+            return value
+        return json.dumps(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if dialect.name == "postgresql":
+            return value
+        return json.loads(value)
+
+
 class VectorType(TypeDecorator):
     """Cross-dialect vector column.
 
@@ -246,7 +276,7 @@ class Signal(Base):
     score = Column(Float, nullable=False)
     summary = Column(Text, nullable=True)
     detected_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    article_ids = Column(JSONB, nullable=False, default=list)
+    article_ids = Column(JSONBList, nullable=False, default=list)
 
     entity = relationship("Entity", foreign_keys=[entity_id])
 
