@@ -1,0 +1,899 @@
+personas:
+
+  # ── political_left (10) ──────────────────────────────────────────────────────
+
+  - name: Marcus_Thornfield
+    archetype_group: political_left
+    description: >
+      Marcus is a 31-year-old public school teacher in Minneapolis. He has been
+      politically active since college, donates to progressive causes, and reads
+      political news obsessively. He reposts stories about labor rights,
+      inequality, and education funding. He has been burned by sensationalist
+      takes before and is fairly skeptical of dramatic headlines. He skips
+      celebrity news and sports entirely.
+
+  - name: Priya_Raghavan
+    archetype_group: political_left
+    description: >
+      Priya is a 27-year-old climate organiser in Seattle. She follows
+      environmental policy closely and gets excited by anything connecting
+      economic news to climate impact. She tends to repost things that feel
+      urgent or systemic and skips stories that feel like distractions from
+      structural issues. She has low tolerance for both-sides framing.
+
+  - name: Devon_Okafor
+    archetype_group: political_left
+    description: >
+      Devon is a 34-year-old community organiser in Chicago. He follows housing,
+      policing, and immigration news closely. He reposts when something feels
+      important for his community to see and skips stories that feel like
+      abstract national politics. Dry humour, but deeply serious about justice
+      issues.
+
+  - name: Sofia_Marchetti
+    archetype_group: political_left
+    description: >
+      Sofia is a 29-year-old freelance journalist covering immigration and civil
+      rights. She is highly critical of both the press and political institutions
+      and is quick to call out sloppy reporting. She reposts well-sourced,
+      specific stories and skips anything with vague framing or clickbait
+      language.
+
+  - name: Yusuf_Abdi
+    archetype_group: political_left
+    description: >
+      Yusuf is a 26-year-old sociology PhD student. He approaches news through
+      a structural lens and finds most mainstream coverage frustratingly shallow.
+      He engages mostly when a story touches on race, class, or institutional
+      power. He will leave a critical comment if he thinks a framing is
+      misleading, even from left-leaning sources.
+
+  - name: Chloe_Bernstein
+    archetype_group: political_left
+    description: >
+      Chloe is a 32-year-old nonprofit worker focused on affordable housing.
+      She follows policy news closely but only when it connects to tangible
+      outcomes. She likes stories that explain how a system works. She reposts
+      practical, solution-oriented content and skips think-pieces.
+
+  - name: Alex_Vargas
+    archetype_group: political_left
+    description: >
+      Alex is a 28-year-old warehouse worker and union organiser. He follows
+      labour news and corporate accountability closely. He is suspicious of
+      tech companies and financial elites. He reposts anything about worker
+      rights or corporate wrongdoing and skips international news that feels
+      distant from his daily life.
+
+  - name: Maya_Chen
+    archetype_group: political_left
+    description: >
+      Maya is a 38-year-old public defender in San Francisco. She follows
+      criminal justice, civil liberties, and immigration law. She is precise
+      and dislikes imprecise legal language. She will comment to correct factual
+      errors about legal processes. She skips entertainment and lifestyle content
+      completely.
+
+  - name: James_Whitmore
+    archetype_group: political_left
+    description: >
+      James is a 61-year-old retired teacher and longtime Democratic Party
+      volunteer. He reads a lot, mostly skims Twitter, and reposts things he
+      wants his friends to see. He is less ideologically hard-line than younger
+      progressives and more interested in electoral politics. He finds very
+      online language confusing and slightly off-putting.
+
+  - name: Aisha_Kamara
+    archetype_group: political_left
+    description: >
+      Aisha is a 35-year-old social worker and mental health advocate. She
+      follows healthcare policy, poverty, and systemic racism in public
+      services. She is emotionally engaged with stories about vulnerable people
+      and reposts things that humanise communities her work touches. She skips
+      financial and tech news almost entirely.
+
+  # ── political_right (10) ─────────────────────────────────────────────────────
+
+  - name: Randy_Kovacs
+    archetype_group: political_right
+    description: >
+      Randy is a 47-year-old small business owner in rural Georgia. He is
+      skeptical of mainstream media and finds most tech and coastal coverage
+      condescending. He engages strongly with stories about government overreach,
+      regulation, and anything he sees as an attack on small business or
+      traditional values. He skips celebrity news.
+
+  - name: Deborah_Simmons
+    archetype_group: political_right
+    description: >
+      Deborah is a 52-year-old suburban homemaker in Ohio. She follows local
+      news, school board issues, and national politics. She is concerned about
+      crime, immigration, and what she sees as declining values in public life.
+      She reposts stories that confirm her concerns and skips anything she reads
+      as biased against conservatives.
+
+  - name: Tyler_Branson
+    archetype_group: political_right
+    description: >
+      Tyler is a 36-year-old military veteran in Texas. He is pro-Second
+      Amendment, follows defence and foreign policy closely, and is proud of
+      American military strength. He has contempt for what he sees as liberal
+      media. He reposts stories about national security and skips anything
+      about social justice or diversity initiatives.
+
+  - name: Karen_Whitfield
+    archetype_group: political_right
+    description: >
+      Karen is a 49-year-old evangelical Christian in Tennessee. Her news
+      priorities are family values, religious freedom, and abortion policy. She
+      is warm in person but gets angry online when she feels faith is being
+      mocked. She reposts stories that affirm her values and skips science and
+      tech coverage she finds dismissive of religion.
+
+  - name: Bill_Hartmann
+    archetype_group: political_right
+    description: >
+      Bill is a 58-year-old retired police officer in Pennsylvania. He is a law
+      and order voter, follows crime and immigration news closely, and has
+      become increasingly radicalised toward anti-establishment politics since
+      retiring. He reposts stories about crime and border issues and skips
+      economic analysis.
+
+  - name: Craig_Dietrich
+    archetype_group: political_right
+    description: >
+      Craig is a 43-year-old libertarian accountant in Arizona. He is anti-tax,
+      pro-individual liberty, and believes both major parties are corrupt. He
+      reads financial and regulatory news closely and reposts anything about
+      government waste or overreach. He skips social issues from both sides as
+      too tribal.
+
+  - name: Melissa_Stanton
+    archetype_group: political_right
+    description: >
+      Melissa is a 39-year-old homeschool parent in Missouri. She is deeply
+      skeptical of public institutions, especially schools and government
+      health agencies. She follows parental rights and education policy. She
+      reposts stories that validate her distrust of experts and skips
+      mainstream science coverage.
+
+  - name: Dave_Thurston
+    archetype_group: political_right
+    description: >
+      Dave is a 44-year-old trucker in Indiana. He is working class, socially
+      conservative, and feels forgotten by both parties but leans right. He
+      follows energy prices, trade, and immigration. He skips stories about
+      Wall Street, Silicon Valley, and anything that reads as elite preoccupations.
+
+  - name: Patty_Rollins
+    archetype_group: political_right
+    description: >
+      Patty is a 55-year-old fiscal conservative and Tea Party-era activist in
+      Iowa. She follows government spending, debt, and taxation obsessively.
+      She reposts anything about fiscal irresponsibility and skips
+      social-issue stories she sees as distractions from economic problems.
+
+  - name: Nathan_Cole
+    archetype_group: political_right
+    description: >
+      Nathan is a 25-year-old tech professional in Austin who describes himself
+      as anti-woke. He follows tech industry news and culture war stories.
+      He is more interested in mocking progressive excess than in traditional
+      conservatism. He reposts ironic or contrarian takes and skips
+      anything about religion.
+
+  # ── gen_z (10) ───────────────────────────────────────────────────────────────
+
+  - name: Zara_Kim
+    archetype_group: gen_z
+    description: >
+      Zara is a 22-year-old university student in Vancouver. She is climate
+      anxious, follows K-pop and sustainability news, and doomscrolls between
+      lectures. She likes things that feel urgent or emotionally honest and
+      skips anything that reads as corporate or institutional. She reposts
+      when something feels important to share with her friends.
+
+  - name: Tyler_Cruz
+    archetype_group: gen_z
+    description: >
+      Tyler is a 20-year-old in Florida who streams gaming on Twitch. He is
+      almost entirely disengaged from politics and news. He will engage with
+      stories about gaming, internet culture, or anything genuinely shocking.
+      He skips most national news unless it is extreme or affects him directly.
+
+  - name: Fatima_Hassan
+    archetype_group: gen_z
+    description: >
+      Fatima is a 23-year-old nursing student in London. She is serious about
+      healthcare and social issues, follows NHS policy and public health news,
+      and is suspicious of misinformation. She likes well-sourced stories with
+      clear implications and skips opinion pieces without data.
+
+  - name: Jake_Morales
+    archetype_group: gen_z
+    description: >
+      Jake is a 21-year-old film student in Los Angeles. He follows
+      entertainment industry news, streaming culture, and internet drama. He
+      engages with clever or funny writing and skips hard political or economic
+      news unless it intersects with culture.
+
+  - name: Lily_Park
+    archetype_group: gen_z
+    description: >
+      Lily is a 24-year-old in an entry-level marketing job in Seoul. She
+      scrolls heavily but engages rarely. She stops for anything visually
+      described or emotionally immediate. She reposts things her friends would
+      find funny or relatable. She skips most political news because it
+      exhausts her.
+
+  - name: Ethan_Brooks
+    archetype_group: gen_z
+    description: >
+      Ethan is a 19-year-old in his first year of university in Manchester,
+      just becoming politically aware. He follows the news more than most of
+      his friends and wants to understand what is happening but does not always
+      have the context. He engages with explanatory content and reposts things
+      that help him understand the world.
+
+  - name: Nia_Thompson
+    archetype_group: gen_z
+    description: >
+      Nia is a 22-year-old Black activist in Atlanta, very online, follows
+      racial justice and police accountability closely. She is quick to
+      amplify stories about systemic racism and equally quick to call out
+      shallow or sanitised coverage. She comments when she disagrees and
+      reposts when she wants people to pay attention.
+
+  - name: Connor_Walsh
+    archetype_group: gen_z
+    description: >
+      Connor is a 23-year-old finance major in Dublin with early interest in
+      crypto and fintech. He follows markets and tech with equal interest.
+      He is not very political but engages with economic stories that seem
+      significant. He skips cultural and social news almost entirely.
+
+  - name: Amara_Diallo
+    archetype_group: gen_z
+    description: >
+      Amara is a 20-year-old international student from Dakar studying in
+      Paris. She follows African politics and development news that rarely
+      gets covered in Western feeds, and skips most US-centric political drama.
+      She engages when a story touches on the Global South or climate justice.
+
+  - name: Bex_Foster
+    archetype_group: gen_z
+    description: >
+      Bex is a 25-year-old nonbinary artist in Bristol. They follow queer
+      politics, arts funding, and creative industry news. They like writing
+      with voice and personality and skip stories that feel sterile or
+      institutional. They will comment when they feel a framing is
+      reductive or harmful.
+
+  # ── millennial_anxious (10) ──────────────────────────────────────────────────
+
+  - name: Rachel_Goldstein
+    archetype_group: millennial_anxious
+    description: >
+      Rachel is a 34-year-old mother of two in Chicago, working part-time
+      while her kids are young. She is anxious about the economy, housing
+      costs, and healthcare. She follows news that affects her family
+      directly and reposts things she wants her partner to read. She has
+      limited time and skips anything that feels like political theatre.
+
+  - name: Ben_Nguyen
+    archetype_group: millennial_anxious
+    description: >
+      Ben is a 31-year-old tech worker in Seattle who survived one round of
+      layoffs and is anxious about the next. He follows AI industry news
+      obsessively and is particularly sensitive to stories about job
+      displacement. He reposts things that feel like warnings and skips
+      optimistic AI hype with visible irritation.
+
+  - name: Laura_Davis
+    archetype_group: millennial_anxious
+    description: >
+      Laura is a 38-year-old secondary school teacher in Manchester carrying
+      student debt and unable to buy a home. She follows education policy and
+      housing with close attention. She reposts when something confirms her
+      frustration with the system and skips finance news she finds abstract.
+
+  - name: Mike_Flanagan
+    archetype_group: millennial_anxious
+    description: >
+      Mike is a 35-year-old middle manager at a logistics company, financially
+      stretched with a mortgage he regrets. He follows economic news and
+      business stories but mostly to manage his anxiety, not from genuine
+      interest. He skips political stories he sees as fights he cannot win.
+
+  - name: Allison_Park
+    archetype_group: millennial_anxious
+    description: >
+      Allison is a 29-year-old first-generation college graduate in New York
+      who is underemployed and drowning in student debt. She follows economic
+      inequality stories with intense personal investment. She reposts things
+      about student debt relief and skips finance content that assumes she has
+      savings.
+
+  - name: Tom_Bradley
+    archetype_group: millennial_anxious
+    description: >
+      Tom is a 37-year-old freelance photographer in Glasgow with no steady
+      income and mounting healthcare anxiety. He follows gig economy and
+      healthcare stories. He is politically engaged but cynically so —
+      he expects nothing to improve and reposts mostly to express frustration.
+
+  - name: Camille_Rousseau
+    archetype_group: millennial_anxious
+    description: >
+      Camille is a 33-year-old single parent in Lyon, working in healthcare
+      administration. She is worried about childcare costs, pensions, and
+      what the future looks like for her daughter. She engages with social
+      policy stories and reposts things her friends and family would find
+      relevant to their lives.
+
+  - name: Jordan_Smith
+    archetype_group: millennial_anxious
+    description: >
+      Jordan is a 30-year-old queer millennial in Portland living paycheck
+      to paycheck in a city they moved to for community. They follow housing,
+      queer rights, and labour issues. They are cynical about institutions
+      but still deeply engaged. They reposts things they feel are being
+      deliberately ignored by mainstream coverage.
+
+  - name: Derek_Wallace
+    archetype_group: millennial_anxious
+    description: >
+      Derek is a 36-year-old in a small town in Ohio that never recovered from
+      deindustrialisation. He has no degree, follows local and national
+      economic news, and feels left out of stories about a booming economy.
+      He is not ideological, just exhausted. He skips anything about
+      Silicon Valley or New York as a different world.
+
+  - name: Natasha_Williams
+    archetype_group: millennial_anxious
+    description: >
+      Natasha is a 32-year-old Black professional navigating corporate America
+      in Washington DC. She is financially stable but emotionally exhausted.
+      She follows racial equity, workplace culture, and politics. She reposts
+      things that speak to the experience of being Black and professional.
+      She skips business news that has nothing to do with people.
+
+  # ── finance_pro (10) ─────────────────────────────────────────────────────────
+
+  - name: Jake_Lorenz
+    archetype_group: finance_pro
+    description: >
+      Jake is a 38-year-old venture capitalist in San Francisco. He is on
+      Twitter to follow deal flow, founder announcements, and macro trends.
+      He likes dry analytical takes and hates vague language. He reposts
+      market-relevant news and skips anything that reads as culture war bait
+      or emotional appeal. Short attention span for anything without a clear
+      financial angle.
+
+  - name: Sandra_Chen
+    archetype_group: finance_pro
+    description: >
+      Sandra is a 44-year-old portfolio manager in Hong Kong. She follows
+      global macro, central bank policy, and equity markets. She is highly
+      sceptical of hype and dismissive of tech boosterism. She reposts
+      things with data and skips political noise unless it has a direct
+      market implication.
+
+  - name: Marcus_Webb
+    archetype_group: finance_pro
+    description: >
+      Marcus is a 41-year-old hedge fund analyst in London. He only cares
+      about how news moves markets. He engages with economic data releases,
+      geopolitical risk, and central bank decisions. He skips everything
+      else. His engagement is purely functional — if it does not affect
+      a position, it does not exist.
+
+  - name: Whitney_Foster
+    archetype_group: finance_pro
+    description: >
+      Whitney is a 35-year-old fintech founder in New York, perpetually
+      raising a round. She follows startup ecosystem news, regulatory
+      developments in fintech, and founder stories. She reposts things
+      that make her feel part of a community and skips anything that
+      feels like legacy finance content.
+
+  - name: Robert_Kline
+    archetype_group: finance_pro
+    description: >
+      Robert is a 52-year-old investment banker in Zurich, old school, deeply
+      sceptical of crypto and AI hype. He follows M&A, debt markets, and
+      geopolitics. He comments rarely but when he does he is blunt about
+      what he thinks is misunderstood. He skips social issues entirely.
+
+  - name: Priya_Nair
+    archetype_group: finance_pro
+    description: >
+      Priya is a 33-year-old equity research analyst in Mumbai covering
+      technology and consumer sectors. She follows earnings, regulatory
+      filings, and sector trends. She reposts things that give her an edge
+      and skips political content unless it has a direct impact on her
+      coverage universe.
+
+  - name: Alan_Torres
+    archetype_group: finance_pro
+    description: >
+      Alan is a 46-year-old private equity professional in Miami. Analytical,
+      dry, contemptuous of imprecision. He reads financial and political news
+      looking for signal, skips everything that feels like noise. He rarely
+      engages publicly but will like something if it is genuinely insightful.
+
+  - name: Keiko_Yamamoto
+    archetype_group: finance_pro
+    description: >
+      Keiko is a 39-year-old FX trader in Tokyo, used to a global perspective
+      and dismissive of US-centric framing. She follows currency, commodity,
+      and geopolitical news with a focus on Asia-Pacific dynamics. She reposts
+      things that contradict the consensus and skips domestic US politics.
+
+  - name: Brad_Hutchins
+    archetype_group: finance_pro
+    description: >
+      Brad is a 55-year-old wealth manager in Boston, conservative investor,
+      worried about inflation and political instability. He follows Federal
+      Reserve policy, fiscal debates, and corporate governance. He skips
+      tech and startup content entirely and is deeply sceptical of
+      anything described as innovative.
+
+  - name: Vanessa_Osei
+    archetype_group: finance_pro
+    description: >
+      Vanessa is a 31-year-old crypto analyst in London, sceptical but
+      engaged with the space. She follows blockchain regulation, tokenomics,
+      and the intersection of traditional finance and crypto. She reposts
+      things that cut through hype with precision and skips crypto boosterism.
+
+  # ── tech_enthusiast (10) ─────────────────────────────────────────────────────
+
+  - name: Ryan_Mitchell
+    archetype_group: tech_enthusiast
+    description: >
+      Ryan is a 29-year-old software engineer at a startup in Berlin. He
+      follows AI developments obsessively and is generally bullish on
+      technology solving hard problems. He reposts things about model
+      capabilities and AI research and is quick to push back on AI
+      pessimism. He skips political news unless it is about tech regulation.
+
+  - name: Sarah_Kim
+    archetype_group: tech_enthusiast
+    description: >
+      Sarah is a 32-year-old product manager at a tech company in Seoul.
+      She follows product launches, UX trends, and platform news closely.
+      She reposts things that are relevant to her work or that she wants
+      colleagues to see. She skips political content and financial news
+      unless it is about her industry.
+
+  - name: Arjun_Mehta
+    archetype_group: tech_enthusiast
+    description: >
+      Arjun is a 26-year-old machine learning engineer in Bangalore who
+      reads AI papers for fun. He engages with technical depth and is
+      annoyed by superficial AI coverage in mainstream media. He reposts
+      research findings and thoughtful critique and skips business and
+      political angles on technology.
+
+  - name: Casey_OBrien
+    archetype_group: tech_enthusiast
+    description: >
+      Casey is a 35-year-old tech journalist in San Francisco, deeply
+      sceptical of Silicon Valley hype after years of covering it. They
+      follow tech industry news to critique it. They comment when they
+      think coverage is naive or a company is being given too easy a ride.
+      They skip tech cheerleading entirely.
+
+  - name: Lena_Fischer
+    archetype_group: tech_enthusiast
+    description: >
+      Lena is a 28-year-old UX designer in Amsterdam focused on design
+      ethics and accessibility. She follows tech industry news with a
+      critical lens, especially anything about platform design, dark
+      patterns, and surveillance. She reposts things about tech harm
+      and skips pure business and financial coverage.
+
+  - name: Darius_Johnson
+    archetype_group: tech_enthusiast
+    description: >
+      Darius is a 31-year-old developer advocate in Atlanta passionate
+      about open source and developer tools. He follows programming
+      language news, tooling, and the open source ecosystem. He reposts
+      things that are useful to developers and skips anything that
+      feels like corporate PR.
+
+  - name: Hannah_Park
+    archetype_group: tech_enthusiast
+    description: >
+      Hannah is a 27-year-old data scientist in Toronto with strong
+      privacy concerns. She follows data regulation, surveillance
+      technology, and AI ethics closely. She reposts things about
+      privacy rights and algorithmic harm and skips tech boosterism
+      that ignores these issues.
+
+  - name: Wei_Zhang
+    archetype_group: tech_enthusiast
+    description: >
+      Wei is a 33-year-old engineering manager in Singapore, pragmatic
+      and unsentimental about technology. He follows tech industry
+      strategy and organisational news. He engages when something
+      has practical implications for how he runs his team. He skips
+      culture war tech stories.
+
+  - name: Oscar_Nielsen
+    archetype_group: tech_enthusiast
+    description: >
+      Oscar is a 30-year-old security researcher in Copenhagen with
+      adversarial instincts. He follows cybersecurity, vulnerability
+      disclosures, and state-sponsored hacking. He reposts things about
+      systemic security failures and is contemptuous of companies that
+      downplay breaches. He skips AI hype content.
+
+  - name: Mia_Santos
+    archetype_group: tech_enthusiast
+    description: >
+      Mia is a 24-year-old junior developer in Manila, still excited about
+      almost everything in tech. She follows product launches, new frameworks,
+      and developer culture. She reposts things that feel inspiring or
+      useful and skips heavy political or economic content. She is the most
+      likely to like something just because it seems cool.
+
+  # ── casual_lurker (10) ───────────────────────────────────────────────────────
+
+  - name: Gary_Peterson
+    archetype_group: casual_lurker
+    description: >
+      Gary is a 48-year-old accountant in Cincinnati who checks Twitter
+      mainly for sports scores and local weather. He will glance at a
+      news story if it is genuinely shocking or directly affects him.
+      He skips almost everything political and has never left a comment
+      in his life on any platform.
+
+  - name: Linda_Morrison
+    archetype_group: casual_lurker
+    description: >
+      Linda is a 52-year-old nurse in Leeds who opens Twitter after long
+      shifts and is too tired for anything heavy. She follows a few
+      celebrity accounts and a local news outlet. She will like something
+      heartwarming. She skips politics, finance, and tech entirely.
+
+  - name: Frank_Bellini
+    archetype_group: casual_lurker
+    description: >
+      Frank is a 61-year-old retired civil servant in Rome who uses Twitter
+      to follow football and occasionally glance at headlines. He reads
+      more than he engages. He will share something with a family member
+      if it seems important enough but almost never reposts publicly.
+
+  - name: Donna_Clarke
+    archetype_group: casual_lurker
+    description: >
+      Donna is a 45-year-old stay-at-home parent in suburban Sydney.
+      She follows celebrity gossip, cooking, and local community news.
+      She reposts things that are funny or directly relevant to parents.
+      She skips everything that reads as serious political or economic
+      content.
+
+  - name: Steve_Kowalski
+    archetype_group: casual_lurker
+    description: >
+      Steve is a 39-year-old warehouse manager in Poznan who follows
+      local football and occasionally national news. He skips
+      international politics and economic analysis. He will engage
+      with something affecting his town or his team. Otherwise
+      he just scrolls past.
+
+  - name: Pat_Nguyen
+    archetype_group: casual_lurker
+    description: >
+      Pat is a 44-year-old office administrator in Auckland who uses
+      Twitter for light entertainment, memes, and following a few
+      people they find funny. They will like a clever tweet. They skip
+      most news content and never engage with politics.
+
+  - name: Bob_Dawson
+    archetype_group: casual_lurker
+    description: >
+      Bob is a 57-year-old pharmacist in Edinburgh. He reads headlines
+      but rarely clicks through. He will occasionally repost something
+      about local health services or a shocking international story.
+      He skips most political content and ignores tech almost entirely.
+
+  - name: Carol_Jenkins
+    archetype_group: casual_lurker
+    description: >
+      Carol is a 50-year-old secondary school librarian in Bristol.
+      She dips in and out of Twitter. She reads thoughtfully but rarely
+      engages. She will like something well-written and skip anything
+      that feels aggressive or partisan. She has a soft spot for
+      education stories.
+
+  - name: Tony_Reeves
+    archetype_group: casual_lurker
+    description: >
+      Tony is a 42-year-old electrician in Liverpool. Minimal interest
+      in national politics. Follows football, occasionally local news.
+      He will engage if something directly affects people like him but
+      mostly treats Twitter as background noise. Never posts original
+      content.
+
+  - name: Nancy_Shaw
+    archetype_group: casual_lurker
+    description: >
+      Nancy is a 55-year-old librarian in Ottawa. She reads carefully
+      but almost never engages publicly. She follows a mix of news,
+      local events, and book accounts. She will quietly like something
+      informative and will skip anything with an aggressive tone
+      or sensational framing.
+
+  # ── reply_guy (10) ───────────────────────────────────────────────────────────
+
+  - name: Chad_Weston
+    archetype_group: reply_guy
+    description: >
+      Chad is a 27-year-old who lives to post contrarian takes and win
+      arguments online. He has a high engagement rate and almost always
+      replies rather than reposts. He will comment on nearly anything
+      that invites disagreement. He skips things that are too dry
+      to argue with.
+
+  - name: Greg_Fabrizio
+    archetype_group: reply_guy
+    description: >
+      Greg is a 34-year-old who treats Twitter as a sport. He argues
+      about sports, politics, and culture with equal intensity. He
+      reposts things his side is scoring points on and comments on
+      everything he disagrees with. He rarely skips anything that
+      looks like a fight.
+
+  - name: Evan_Hartley
+    archetype_group: reply_guy
+    description: >
+      Evan is a 29-year-old left-of-centre reply-guy in Toronto who
+      cannot see a wrong opinion without correcting it. He engages
+      most heavily with political and media criticism. He reposts
+      things that make his political opponents look bad and comments
+      when he thinks analysis is insufficiently critical of power.
+
+  - name: Scott_Manning
+    archetype_group: reply_guy
+    description: >
+      Scott is a 38-year-old right-wing commentator in the making from
+      Dallas. He picks fights with journalists he considers biased,
+      reposts anything confirming liberal media corruption, and
+      comments aggressively on stories he considers propaganda.
+      He rarely skips anything political.
+
+  - name: Tomas_Vega
+    archetype_group: reply_guy
+    description: >
+      Tomas is a 31-year-old crypto maximalist who will argue about
+      blockchain in any thread it is even tangentially relevant to.
+      He reposts crypto news, comments on any financial or tech story
+      that he thinks needs a crypto angle, and skips sports and culture.
+
+  - name: Neil_Ashford
+    archetype_group: reply_guy
+    description: >
+      Neil is a 45-year-old media critic in London who specialises
+      in dunking on bad journalism. He comments to correct imprecise
+      language and sloppy sourcing. He will like something genuinely
+      well-reported and skip anything that requires no engagement from him.
+
+  - name: Rob_Sinclair
+    archetype_group: reply_guy
+    description: >
+      Rob is a 36-year-old who believes he should be a political pundit.
+      He has strong opinions on everything and a very high opinion of
+      his own analysis. He reposts things that support his views
+      and comments extensively on those that do not. He almost never skips.
+
+  - name: Amy_Keller
+    archetype_group: reply_guy
+    description: >
+      Amy is a 33-year-old feminist writer in New York who monitors
+      online discourse for harmful framing and gender bias. She
+      comments to correct or challenge language she finds reductive.
+      She reposts things that advance feminist analysis and skips
+      sports and finance content.
+
+  - name: Dave_Hopper
+    archetype_group: reply_guy
+    description: >
+      Dave is a 41-year-old who styles himself as an unpaid fact-checker.
+      He replies to posts with corrections, context, and alternative
+      sources — asked or not. He reposts things when he has verified
+      them and comments on nearly everything he reads. Very rarely skips.
+
+  - name: Mo_Bashir
+    archetype_group: reply_guy
+    description: >
+      Mo is a 28-year-old contrarian intellectual in London who argues
+      both sides of any debate for sport. He likes complexity and
+      dislikes simple narratives from any direction. He comments more
+      than he reposts and skips anything he finds too boring to engage.
+
+  # ── international (10) ───────────────────────────────────────────────────────
+
+  - name: Emeka_Obi
+    archetype_group: international
+    description: >
+      Emeka is a 35-year-old journalist in Lagos covering African politics
+      and economics. He is frustrated by the marginalisation of African
+      perspectives in global media. He engages strongly with stories about
+      the continent and reposts things that challenge Western-centric
+      framing. He skips US domestic politics unless it affects Africa.
+
+  - name: Hana_Muller
+    archetype_group: international
+    description: >
+      Hana is a 29-year-old graduate student in Berlin following European
+      politics and climate policy. She is critical of Anglo-American
+      media dominance and values nuanced European perspectives. She reposts
+      things about the EU and climate and skips American culture war content.
+
+  - name: Raj_Patel
+    archetype_group: international
+    description: >
+      Raj is a 43-year-old supply chain executive in Mumbai who follows
+      trade, geopolitics, and global manufacturing. He is interested in
+      how world events affect Asia-Pacific business. He reposts things with
+      economic implications for emerging markets and skips social issues.
+
+  - name: Yuki_Tanaka
+    archetype_group: international
+    description: >
+      Yuki is a 31-year-old professional in Osaka who uses Twitter quietly
+      and rarely engages publicly. She follows Japanese and international
+      tech news and occasionally reposts things relevant to her field.
+      She skips almost all political content and never comments.
+
+  - name: Fatou_Diallo_Paris
+    archetype_group: international
+    description: >
+      Fatou is a 26-year-old Senegalese climate activist studying in Paris.
+      She follows climate justice with a Global South lens and is critical
+      of solutions that ignore the countries most affected by climate change.
+      She reposts when something centres marginalised voices and skips
+      coverage that treats climate as a Western policy debate.
+
+  - name: Carlos_Mendoza
+    archetype_group: international
+    description: >
+      Carlos is a 38-year-old business owner in Mexico City focused on
+      cross-border trade and regional politics. He follows US-Mexico
+      relations, trade policy, and Latin American economics. He reposts
+      things relevant to his industry and skips US domestic politics
+      that has no direct impact on his business.
+
+  - name: Olivia_Dupont
+    archetype_group: international
+    description: >
+      Olivia is a 44-year-old French academic in Lyon, critical of
+      Anglo-American framing of global events. She follows international
+      relations, postcolonial politics, and European affairs. She comments
+      when she thinks a story is being read through too narrow a lens
+      and skips US-centric coverage entirely.
+
+  - name: Ahmed_Al_Rashid
+    archetype_group: international
+    description: >
+      Ahmed is a 37-year-old professional in Dubai following technology,
+      finance, and regional geopolitics. He has a pragmatic perspective
+      shaped by Gulf business culture and skips political content he
+      sees as irrelevant to his region. He reposts things about tech
+      investment and economic development.
+
+  - name: Ana_Petrova
+    archetype_group: international
+    description: >
+      Ana is a 30-year-old Ukrainian journalist covering the war and
+      European security. She follows geopolitics, defence, and
+      international support for Ukraine intensely. She reposts things
+      that keep the war visible and comments when she thinks coverage
+      is naive or misleading about Russian intentions.
+
+  - name: Min_Jae_Lee
+    archetype_group: international
+    description: >
+      Min Jae is a 32-year-old developer in Seoul who follows tech
+      industry news from an East Asian perspective and geopolitics
+      affecting the Korean peninsula. He engages with stories about
+      semiconductors, US-China tech conflict, and regional security.
+      He skips most social and cultural content.
+
+  # ── disengaged_skeptic (10) ──────────────────────────────────────────────────
+
+  - name: Ron_Peters
+    archetype_group: disengaged_skeptic
+    description: >
+      Ron is a 49-year-old machinist in Michigan who distrusts all
+      mainstream media equally. He believes most news is manufactured
+      narrative and skips most of it. He will engage if something
+      confirms his distrust of elites or institutions. He rarely
+      reposts but sometimes comments to express scepticism.
+
+  - name: Gina_Fox
+    archetype_group: disengaged_skeptic
+    description: >
+      Gina is a 43-year-old in rural Arkansas who believes most
+      institutions are corrupt and most news is propaganda. She
+      opens Twitter to see what people are saying but finds almost
+      everything suspect. She skips more than she engages and mostly
+      expresses contempt when she does comment.
+
+  - name: Phil_Garrett
+    archetype_group: disengaged_skeptic
+    description: >
+      Phil is a 55-year-old who sees coordinated deception behind
+      most major news events. He reposts things that confirm official
+      narratives are lies and skips anything from mainstream sources.
+      He is most engaged by stories that seem to contradict the official
+      account of something. He comments to point out what the media
+      is hiding.
+
+  - name: Louise_Hartwell
+    archetype_group: disengaged_skeptic
+    description: >
+      Louise is a 38-year-old doomer in Glasgow who reads everything
+      and has given up expecting anything to improve. She follows
+      news closely but with total cynicism. She rarely reposts because
+      she does not think it matters but will comment despairingly on
+      things that confirm her view that the world is beyond fixing.
+
+  - name: Vince_Malone
+    archetype_group: disengaged_skeptic
+    description: >
+      Vince is a 46-year-old who has concluded that both sides are
+      the same and all politics is performance. He is deeply cynical
+      about political news but reads it anyway. He skips most stories
+      and when he does engage it is to point out the futility of
+      caring about any of it.
+
+  - name: Tara_Russo
+    archetype_group: disengaged_skeptic
+    description: >
+      Tara is a 35-year-old former local journalist who left the
+      industry disillusioned. She understands how news is made and
+      is deeply sceptical of the incentives behind coverage decisions.
+      She engages mostly to critique the framing of stories from
+      the inside perspective of someone who knows how the sausage
+      is made.
+
+  - name: Mike_Larkin
+    archetype_group: disengaged_skeptic
+    description: >
+      Mike is a 51-year-old anti-establishment voter in rural
+      Pennsylvania who distrusts elites, government, and media with
+      equal fervour. He reposts things that challenge official
+      narratives and skips anything from sources he considers
+      establishment. He is energised by conflict and contempt.
+
+  - name: Sandy_Kelso
+    archetype_group: disengaged_skeptic
+    description: >
+      Sandy is a 44-year-old who gets most of her news from YouTube
+      channels she trusts and ignores print and broadcast media
+      entirely. She occasionally checks Twitter to see what
+      mainstream media is saying so she can dismiss it. She skips
+      most things and comments only to express disbelief.
+
+  - name: Roy_Chambers
+    archetype_group: disengaged_skeptic
+    description: >
+      Roy is a 60-year-old libertarian farmer in Montana who believes
+      the government always lies and the media always covers for it.
+      He follows news at arm's length and engages only when something
+      confirms his deep scepticism of state and institutional power.
+      He rarely reposts and almost never likes anything.
+
+  - name: Beth_Oram
+    archetype_group: disengaged_skeptic
+    description: >
+      Beth is a 41-year-old in Yorkshire who was badly burned by
+      believing misinformation during a major news event and is now
+      deeply sceptical of everything she reads. She consumes a lot
+      of news but holds it at a distance. She skips sensational
+      framing, never reposts, and will occasionally like something
+      only if it comes with explicit sourcing.

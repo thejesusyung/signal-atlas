@@ -373,9 +373,159 @@
 
     /* ── Feed state messages ── */
     #feed-empty, #feed-spinner { text-align: center; padding: 48px 0; font-size: 13px; color: #334155; }
+
+    /* ── Simulation view ─────────────────────────────────────── */
+    #sim-view {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 40px; z-index: 5;
+      background: #060a14; display: flex;
+      opacity: 0; visibility: hidden; pointer-events: none;
+      transition: opacity 0.22s ease, left 0.28s cubic-bezier(0.4,0,0.2,1);
+    }
+    body.view-sim #sim-view { opacity: 1; visibility: visible; pointer-events: auto; left: 0 !important; bottom: 0; flex-direction: column; }
+    body.view-sim #header   { display: none; }
+    body.view-sim #canvas   { display: none; }
+    body.view-sim #legend   { display: none; }
+    body.view-sim #hint     { display: none; }
+    body.view-sim #tip      { display: none !important; }
+    body.view-sim #panel    { display: none; }
+    body.view-sim #graph-search-wrap { display: none; }
+    body.view-sim #signals-sidebar   { transform: translateX(-260px) !important; }
+    body.view-sim #signals-sidebar-toggle { display: none; }
+    body.sidebar-open #sim-view { left: 260px; }
+
+    /* View toggle button group */
+    #view-toggle-wrap { pointer-events: auto; flex-shrink: 0; display: flex; gap: 4px; }
+    .vtb {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 8px; color: #94a3b8; font-size: 12px; font-weight: 700;
+      letter-spacing: 0.05em; padding: 6px 14px; cursor: pointer; font-family: inherit;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .vtb:hover { background: rgba(255,255,255,0.08); color: #f1f5f9; border-color: rgba(255,255,255,0.18); }
+    .vtb.active { background: rgba(129,140,248,0.12); border-color: rgba(129,140,248,0.35); color: #818cf8; }
+
+    /* Sim info bar */
+    #sim-info-bar {
+      flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: rgba(6,10,20,0.8);
+    }
+    #sim-info-collapsed {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 18px;
+    }
+    #sim-info-title { font-size: 12px; font-weight: 700; color: #475569; letter-spacing: 0.04em; }
+    #sim-info-toggle {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 50%; width: 22px; height: 22px; color: #475569; font-size: 11px;
+      font-weight: 700; cursor: pointer; font-family: inherit; line-height: 1;
+      flex-shrink: 0;
+    }
+    #sim-info-toggle:hover { color: #94a3b8; border-color: rgba(255,255,255,0.2); }
+    #sim-info-toggle.open { color: #818cf8; border-color: rgba(129,140,248,0.4); }
+    #sim-info-expanded { display: none; padding: 0 18px 14px; }
+    #sim-info-expanded.open { display: block; }
+    #sim-info-body p { font-size: 12px; color: #475569; margin: 0 0 10px; line-height: 1.6; }
+    #sim-info-body b { color: #64748b; }
+    #sim-info-cols {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 10px;
+    }
+    #sim-info-cols > div {
+      font-size: 11px; color: #334155; line-height: 1.55;
+      padding: 10px 12px; background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;
+    }
+    #sim-info-cols b { color: #475569; display: block; margin-bottom: 4px; }
+    #sim-info-score { margin: 0 !important; }
+
+    /* Sim columns wrapper */
+    #sim-cols { flex: 1; display: flex; overflow: hidden; }
+
+    /* Sim layout columns */
+    #sim-col-left {
+      width: 265px; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.05);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    #sim-col-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    #sim-col-right {
+      width: 295px; flex-shrink: 0; border-left: 1px solid rgba(255,255,255,0.05);
+      display: flex; flex-direction: column; overflow: hidden;
+      background: rgba(6,10,20,0.5);
+    }
+    .sim-pane-hdr {
+      padding: 13px 16px 9px; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
+    }
+    .sim-pane-title { font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #334155; }
+    .sim-pane-sub { font-size: 11px; color: #1e293b; margin-top: 3px; }
+    .sim-scroll { flex: 1; overflow-y: auto; }
+    .sim-scroll::-webkit-scrollbar { width: 3px; }
+    .sim-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+
+    /* Cycle nav */
+    #sim-cycle-nav {
+      display: flex; align-items: center; gap: 8px; padding: 7px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.04); flex-shrink: 0;
+    }
+    .sim-nav-btn {
+      background: none; border: 1px solid rgba(255,255,255,0.08); border-radius: 5px;
+      color: #334155; font-size: 14px; cursor: pointer; padding: 1px 8px; line-height: 1.4;
+      font-family: inherit; transition: color 0.13s, border-color 0.13s;
+    }
+    .sim-nav-btn:hover:not(:disabled) { color: #94a3b8; border-color: rgba(255,255,255,0.18); }
+    .sim-nav-btn:disabled { opacity: 0.2; cursor: not-allowed; }
+    #sim-cycle-lbl { font-size: 11px; color: #475569; font-weight: 600; flex: 1; text-align: center; }
+
+    /* Leaderboard rows */
+    .lb-row {
+      display: flex; align-items: flex-start; gap: 10px; padding: 9px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer;
+      transition: background 0.12s;
+    }
+    .lb-row:hover { background: rgba(255,255,255,0.04); }
+    .lb-row.active { background: rgba(129,140,248,0.09); border-right: 2px solid #818cf8; }
+    .lb-rank { font-size: 11px; font-weight: 800; width: 16px; flex-shrink: 0; padding-top: 1px; color: #334155; text-align: right; }
+    .lb-rank.r1 { color: #facc15; } .lb-rank.r2 { color: #94a3b8; } .lb-rank.r3 { color: #fb923c; }
+    .lb-info { flex: 1; min-width: 0; }
+    .lb-name { font-size: 12.5px; font-weight: 700; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lb-meta { font-size: 9.5px; color: #334155; margin-top: 2px; }
+    .lb-bar-bg { height: 2px; background: rgba(255,255,255,0.06); border-radius: 1px; margin: 5px 0 4px; overflow: hidden; }
+    .lb-bar-fill { height: 100%; border-radius: 1px; background: linear-gradient(90deg,#6366f1,#818cf8); }
+    .lb-engmt { display: flex; gap: 6px; font-size: 9.5px; color: #334155; }
+    .lb-engmt b { color: #475569; }
+    .lb-score-num { font-size: 14px; font-weight: 800; color: #818cf8; flex-shrink: 0; padding-top: 1px; }
+
+    /* Tweet cards */
+    .sim-tweet {
+      margin: 8px 12px; padding: 11px 13px;
+      background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+    }
+    .tweet-hdr { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+    .tweet-author { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #475569; flex: 1; }
+    .tweet-ver { font-size: 9.5px; color: #1e293b; }
+    .tweet-body { font-size: 12.5px; color: #cbd5e1; line-height: 1.55; margin-bottom: 9px; }
+    .tweet-footer { display: flex; align-items: center; gap: 10px; }
+    .tweet-react { font-size: 10px; color: #334155; }
+    .tweet-react b { color: #475569; font-weight: 600; }
+    .tweet-escore { font-size: 10.5px; font-weight: 700; margin-left: auto; }
+
+    /* Mutation log */
+    .mut-row { padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .mut-name { font-size: 12px; font-weight: 700; color: #f87171; margin-bottom: 3px; }
+    .mut-info { font-size: 10.5px; color: #334155; line-height: 1.5; }
+
+    /* Prompt evolution */
+    .evo-ver { padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .evo-hdr { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+    .evo-tag { font-size: 9.5px; font-weight: 800; color: #334155; }
+    .evo-tag.current { color: #818cf8; }
+    .evo-cycle { font-size: 9.5px; color: #1e293b; flex: 1; }
+    .evo-score { font-size: 10px; color: #475569; font-weight: 600; }
+    .evo-prompt { font-size: 11px; color: #64748b; line-height: 1.55; }
+
+    .sim-msg { padding: 36px 20px; text-align: center; font-size: 12px; color: #334155; line-height: 1.7; }
   </style>
 </head>
-<body>
+<body class="view-sim">
 
 <svg id="canvas"></svg>
 
@@ -431,10 +581,9 @@
     <button id="graph-search-clear" style="display:none">×</button>
   </div>
   <div id="view-toggle-wrap">
-    <button class="view-toggle-btn" id="view-toggle" onclick="switchView()">
-      <span id="view-toggle-icon">⊞</span>
-      <span id="view-toggle-label">Feed</span>
-    </button>
+    <button class="vtb" id="vtb-graph" onclick="switchView('graph')" style="display:none">◎ Graph</button>
+    <button class="vtb" id="vtb-feed"  onclick="switchView('feed')" style="display:none">⊞ Feed</button>
+    <button class="vtb active" id="vtb-sim"   onclick="switchView('sim')">▷ Sim</button>
   </div>
   <div id="stats-panel"></div>
 </div>
@@ -475,6 +624,71 @@
   </div>
 </div>
 
+<!-- Simulation view -->
+<div id="sim-view">
+
+  <!-- Info bar -->
+  <div id="sim-info-bar">
+    <div id="sim-info-collapsed">
+      <span id="sim-info-title">Signal Atlas · Writer Simulation</span>
+      <button id="sim-info-toggle" onclick="toggleSimInfo()">?</button>
+    </div>
+    <div id="sim-info-expanded">
+      <div id="sim-info-body">
+        <p><b>What is this?</b> Five AI writer personas compete each cycle to craft the most engaging tweet about today's top news signals. After every cycle, 10 reader personas sample each tweet and react — repost, comment, like, or skip. The bottom two writers by engagement score have their style prompts rewritten by an LLM (a <b>mutation</b>). Over time, the fittest prompt styles survive.</p>
+        <div id="sim-info-cols">
+          <div><b>Leaderboard</b><br>Writers ranked by engagement score for the displayed cycle. Click a writer to drill into their tweets and prompt history. Use ‹ › to navigate past cycles.</div>
+          <div><b>Tweets</b><br>Every tweet the selected writer generated this cycle, with per-tweet breakdown of reposts, comments, likes, and skips from sampled readers.</div>
+          <div><b>Mutations · Evolution</b><br>Which writers had their prompts rewritten this cycle, and the selected writer's full prompt version lineage across all cycles.</div>
+        </div>
+        <p id="sim-info-score"><b>Engagement score</b> = (reposts×3 + comments×2 + likes×1) ÷ (readers×3). Range 0–1, higher is better.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three columns -->
+  <div id="sim-cols">
+  <!-- Left: Leaderboard -->
+  <div id="sim-col-left">
+    <div class="sim-pane-hdr">
+      <div class="sim-pane-title">Leaderboard</div>
+      <div class="sim-pane-sub" id="sim-lb-sub">&nbsp;</div>
+    </div>
+    <div id="sim-cycle-nav">
+      <button class="sim-nav-btn" id="sim-prev-btn" onclick="simNavCycle(-1)" disabled>‹</button>
+      <span id="sim-cycle-lbl">—</span>
+      <button class="sim-nav-btn" id="sim-next-btn" onclick="simNavCycle(1)" disabled>›</button>
+    </div>
+    <div class="sim-scroll" id="sim-leaderboard">
+      <div class="sim-msg" id="sim-lb-loading">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Center: Tweets -->
+  <div id="sim-col-main">
+    <div class="sim-pane-hdr">
+      <div class="sim-pane-title" id="sim-tweets-title">Tweets</div>
+      <div class="sim-pane-sub" id="sim-tweets-sub">&nbsp;</div>
+    </div>
+    <div class="sim-scroll" id="sim-tweets"></div>
+  </div>
+
+  <!-- Right: Mutations + Prompt evolution -->
+  <div id="sim-col-right">
+    <div class="sim-pane-hdr">
+      <div class="sim-pane-title">Mutations</div>
+      <div class="sim-pane-sub" id="sim-mut-sub">&nbsp;</div>
+    </div>
+    <div style="flex:0 0 auto;max-height:40%;overflow-y:auto" id="sim-mutations"></div>
+    <div class="sim-pane-hdr" style="border-top:1px solid rgba(255,255,255,0.05)">
+      <div class="sim-pane-title">Prompt Evolution <span style="font-weight:400;opacity:0.45;font-size:10px">(all cycles)</span></div>
+      <div class="sim-pane-sub" id="sim-evo-sub">Select a writer</div>
+    </div>
+    <div class="sim-scroll" id="sim-evolution"></div>
+  </div>
+  </div><!-- /sim-cols -->
+</div>
+
 <!-- Ticker -->
 <div id="ticker">
   <div id="ticker-label">LATEST</div>
@@ -483,7 +697,7 @@
   </div>
 </div>
 
-<div id="loading-overlay">Loading graph…</div>
+<div id="loading-overlay" style="display:none">Loading graph…</div>
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
@@ -535,7 +749,7 @@ function nodeR(d) {
 
 // ── Global state ──────────────────────────────────────────
 // Feed
-let currentView     = 'graph';
+let currentView     = 'sim';
 let feedInitialized = false;
 let feedTopic       = null;
 let feedSearch      = null;
@@ -549,6 +763,13 @@ let graphTopicFilter = null;
 // Sidebar
 let signalsSidebarOpen = true;
 let signalsData        = [];
+// Simulation
+let simInitialized   = false;
+let simCycleNumber   = null;
+let simCycleMax      = null;
+let simSelectedWriter = null;
+let simLeaderboard   = [];
+let simTweets        = [];
 // Graph refs (set after graph loads)
 let graphNodes     = null;
 let graphLinks     = null;
@@ -947,26 +1168,30 @@ graphSearchClear.addEventListener('click', () => {
   applyGraphSearch(null);
 });
 
-// ── Feed view ──────────────────────────────────────────────
+// ── View switching ─────────────────────────────────────────
 function switchView(target) {
-  const goTo = target || (currentView === 'graph' ? 'feed' : 'graph');
-  if (goTo === currentView) return;
-  currentView = goTo;
+  if (target === currentView) return;
+  currentView = target;
   document.body.classList.toggle('view-feed', currentView === 'feed');
-  const label = document.getElementById('view-toggle-label');
-  const icon  = document.getElementById('view-toggle-icon');
+  document.body.classList.toggle('view-sim',  currentView === 'sim');
+
+  ['graph','feed','sim'].forEach(v => {
+    const btn = document.getElementById(`vtb-${v}`);
+    if (btn) btn.classList.toggle('active', v === currentView);
+  });
+
   if (currentView === 'feed') {
-    label.textContent = 'Graph';
-    icon.textContent  = '◎';
     closePanel();
     if (!feedInitialized) initFeedView();
+  } else if (currentView === 'sim') {
+    closePanel();
+    if (!simInitialized) initSimView();
   } else {
-    label.textContent = 'Feed';
-    icon.textContent  = '⊞';
-    // Restore any active graph topic filter
     if (graphTopicFilter) highlightGraphTopic(graphTopicFilter);
   }
 }
+
+// ── Feed view ──────────────────────────────────────────────
 
 function initFeedView() {
   feedInitialized = true;
@@ -1238,6 +1463,220 @@ function highlightGraphTopic(topicName) {
     return sid !== topicNode.id && tid !== topicNode.id;
   });
 }
+
+// ── Simulation ─────────────────────────────────────────────
+
+function initSimView() {
+  simInitialized = true;
+  // Fetch latest cycle first, then determine the max cycle number
+  fetch('/simulation/latest')
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(data => {
+      simCycleMax = data.cycle.cycle_number;
+      renderSimCycle(data);
+    })
+    .catch(code => {
+      const el = document.getElementById('sim-lb-loading');
+      if (el) el.textContent = code === 404
+        ? 'No simulation cycles yet.\nTrigger simulation_dag in Airflow to start.'
+        : 'Failed to load simulation data.';
+    });
+}
+
+function simNavCycle(delta) {
+  if (simCycleNumber === null) return;
+  const next = simCycleNumber + delta;
+  if (next < 1) return;
+  const loadEl = document.getElementById('sim-lb-loading');
+  if (loadEl) { loadEl.textContent = 'Loading…'; loadEl.style.display = 'block'; }
+  fetch(`/simulation/cycles/${next}`)
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(data => {
+      if (simCycleMax === null || next > simCycleMax) simCycleMax = next;
+      renderSimCycle(data);
+    })
+    .catch(() => {
+      if (loadEl) { loadEl.textContent = `Cycle ${next} not found.`; loadEl.style.display = 'block'; }
+    });
+}
+
+function renderSimCycle(data) {
+  const cycle = data.cycle;
+  simCycleNumber = cycle.cycle_number;
+  simLeaderboard = data.leaderboard || [];
+  simTweets      = data.tweets || [];
+
+  // Hide loading placeholder
+  const loadEl = document.getElementById('sim-lb-loading');
+  if (loadEl) loadEl.style.display = 'none';
+
+  // Cycle nav label + buttons
+  const dt = cycle.completed_at ? new Date(cycle.completed_at) : null;
+  const dateStr = dt ? dt.toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '';
+  document.getElementById('sim-cycle-lbl').textContent =
+    `Cycle ${simCycleNumber}${dateStr ? ' · ' + dateStr : ''}`;
+  document.getElementById('sim-prev-btn').disabled = simCycleNumber <= 1;
+  document.getElementById('sim-next-btn').disabled =
+    simCycleMax !== null && simCycleNumber >= simCycleMax;
+
+  // Sub-header info
+  const mlLink = cycle.mlflow_run_id
+    ? ` · <span style="color:#475569;font-size:9px">${cycle.mlflow_run_id.slice(0,8)}…</span>`
+    : '';
+  document.getElementById('sim-lb-sub').innerHTML =
+    `${cycle.story_count} stories · ${simLeaderboard.length} writers${mlLink}`;
+
+  _renderLeaderboard(simLeaderboard);
+  _renderMutations(data.mutations || [], simCycleNumber);
+
+  // Default: select top writer
+  simSelectedWriter = simLeaderboard[0]?.writer_name || null;
+  _renderTweets(simSelectedWriter);
+  _renderEvolution(simSelectedWriter);
+  _syncLeaderboardActive();
+}
+
+function _renderLeaderboard(lb) {
+  const el = document.getElementById('sim-leaderboard');
+  if (!lb.length) {
+    el.innerHTML = '<div class="sim-msg">No leaderboard data.</div>';
+    return;
+  }
+  const rankCls = r => r === 1 ? 'r1' : r === 2 ? 'r2' : r === 3 ? 'r3' : '';
+  el.innerHTML = lb.map(w => {
+    const pct = Math.round(w.engagement_score * 100);
+    const name = (w.writer_name || '').replace(/</g,'&lt;');
+    return `<div class="lb-row" data-writer="${name}">
+      <div class="lb-rank ${rankCls(w.rank)}">${w.rank}</div>
+      <div class="lb-info">
+        <div class="lb-name">${name}</div>
+        <div class="lb-meta">v${w.prompt_version ?? '?'} · ${w.tweet_count} tweets · ${w.readers_sampled} readers</div>
+        <div class="lb-bar-bg"><div class="lb-bar-fill" style="width:${pct}%"></div></div>
+        <div class="lb-engmt">
+          <span>&#x1F501; <b>${w.repost_count}</b></span>
+          <span>&#x1F4AC; <b>${w.comment_count}</b></span>
+          <span>&#x2665; <b>${w.like_count}</b></span>
+          <span>&#x23ED; <b>${w.skip_count}</b></span>
+        </div>
+      </div>
+      <div class="lb-score-num">${w.engagement_score.toFixed(3)}</div>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('.lb-row').forEach(row => {
+    row.addEventListener('click', () => {
+      simSelectedWriter = row.dataset.writer;
+      _syncLeaderboardActive();
+      _renderTweets(simSelectedWriter);
+      _renderEvolution(simSelectedWriter);
+    });
+  });
+}
+
+function _syncLeaderboardActive() {
+  document.querySelectorAll('.lb-row').forEach(row => {
+    row.classList.toggle('active', row.dataset.writer === simSelectedWriter);
+  });
+}
+
+function _renderTweets(writerName) {
+  const el      = document.getElementById('sim-tweets');
+  const titleEl = document.getElementById('sim-tweets-title');
+  const subEl   = document.getElementById('sim-tweets-sub');
+
+  const tweets = writerName
+    ? simTweets.filter(t => t.writer_name === writerName)
+    : simTweets;
+
+  titleEl.textContent = writerName ? `Tweets · ${writerName}` : 'All Tweets';
+  subEl.textContent   = `${tweets.length} tweet${tweets.length !== 1 ? 's' : ''} this cycle`;
+
+  if (!tweets.length) {
+    el.innerHTML = '<div class="sim-msg">No tweets for this cycle.</div>';
+    return;
+  }
+
+  const sorted = [...tweets].sort((a, b) => b.engagement_score - a.engagement_score);
+  el.innerHTML = sorted.map(t => {
+    const sc = t.engagement_score;
+    const scoreColor = sc >= 0.5 ? '#4ade80' : sc >= 0.3 ? '#facc15' : '#64748b';
+    const content = (t.content || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<div class="sim-tweet">
+      <div class="tweet-hdr">
+        <span class="tweet-author">${(t.writer_name||'').replace(/</g,'&lt;')}</span>
+        <span class="tweet-ver">v${t.prompt_version ?? '?'}</span>
+      </div>
+      <div class="tweet-body">${content}</div>
+      <div class="tweet-footer">
+        <span class="tweet-react">&#x1F501; <b>${t.repost_count}</b></span>
+        <span class="tweet-react">&#x1F4AC; <b>${t.comment_count}</b></span>
+        <span class="tweet-react">&#x2665; <b>${t.like_count}</b></span>
+        <span class="tweet-react">&#x23ED; <b>${t.skip_count}</b></span>
+        <span class="tweet-escore" style="color:${scoreColor}">${sc.toFixed(3)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _renderMutations(mutations, cycleNumber) {
+  const el    = document.getElementById('sim-mutations');
+  const subEl = document.getElementById('sim-mut-sub');
+  const cycleLabel = cycleNumber != null ? ` · cycle ${cycleNumber}` : '';
+  subEl.textContent = mutations.length
+    ? `${mutations.length} mutation${mutations.length !== 1 ? 's' : ''}${cycleLabel}`
+    : `none${cycleLabel}`;
+  if (!mutations.length) {
+    el.innerHTML = '<div style="padding:10px 16px 2px;font-size:11px;color:#1e293b">No prompt changes this cycle — see Evolution for writer history.</div>';
+    return;
+  }
+  el.innerHTML = mutations.map(m => {
+    const score = m.triggered_by_score != null ? m.triggered_by_score.toFixed(3) : '—';
+    return `<div class="mut-row">
+      <div class="mut-name">${(m.writer_name||'').replace(/</g,'&lt;')} &#8594; v${m.new_version}</div>
+      <div class="mut-info">Score that triggered: ${score}</div>
+    </div>`;
+  }).join('');
+}
+
+function _renderEvolution(writerName) {
+  const el    = document.getElementById('sim-evolution');
+  const subEl = document.getElementById('sim-evo-sub');
+  if (!writerName) { el.innerHTML = ''; subEl.textContent = 'Select a writer'; return; }
+
+  subEl.textContent = `Loading ${writerName}…`;
+  fetch(`/simulation/writers/${encodeURIComponent(writerName)}/evolution`)
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(data => {
+      const versions = data.versions || [];
+      subEl.textContent = `${versions.length} version${versions.length !== 1 ? 's' : ''} · ${data.total_mutations} mutation${data.total_mutations !== 1 ? 's' : ''}`;
+      const latest = versions.length ? versions[versions.length - 1].version_number : null;
+      el.innerHTML = versions.slice().reverse().map(v => {
+        const isCurrent = v.version_number === latest;
+        const prompt = (v.style_prompt || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const score  = v.avg_score_while_active != null ? v.avg_score_while_active.toFixed(3) : '—';
+        const trigger = v.triggered_by_score != null ? ` · triggered at ${v.triggered_by_score.toFixed(3)}` : '';
+        return `<div class="evo-ver">
+          <div class="evo-hdr">
+            <span class="evo-tag${isCurrent ? ' current' : ''}">v${v.version_number}${isCurrent ? ' · current' : ''}</span>
+            <span class="evo-cycle">cycle ${v.cycle_introduced}${trigger}</span>
+            <span class="evo-score">${score}</span>
+          </div>
+          <div class="evo-prompt">${prompt}</div>
+        </div>`;
+      }).join('');
+    })
+    .catch(() => { el.innerHTML = ''; subEl.textContent = 'Failed to load'; });
+}
+
+function toggleSimInfo() {
+  const btn = document.getElementById('sim-info-toggle');
+  const exp = document.getElementById('sim-info-expanded');
+  const open = exp.classList.toggle('open');
+  btn.classList.toggle('open', open);
+  btn.textContent = open ? '×' : '?';
+}
+
+initSimView();
 </script>
 </body>
 </html>

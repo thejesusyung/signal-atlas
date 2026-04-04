@@ -13,14 +13,29 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # pgvector extension
-    op.execute("CREATE EXTENSION IF NOT EXISTS vector")
+    bind = op.get_bind()
+    is_pg = bind.dialect.name == "postgresql"
+
+    # pgvector extension (PostgreSQL only)
+    if is_pg:
+        op.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
     # Embedding + cluster columns on raw_articles
     op.add_column("raw_articles", sa.Column("embedding", sa.Text(), nullable=True))
     op.add_column("raw_articles", sa.Column("semantic_cluster_id", sa.Integer(), nullable=True))
     op.add_column("raw_articles", sa.Column("cluster_label", sa.String(200), nullable=True))
     op.create_index("ix_raw_articles_semantic_cluster_id", "raw_articles", ["semantic_cluster_id"])
+
+    # article_ids: JSONB on PostgreSQL (native indexed JSON storage), TEXT on SQLite (tests).
+    # The ORM model uses the JSONBList TypeDecorator which handles serialisation on both dialects.
+    if is_pg:
+        article_ids_col = sa.Column(
+            "article_ids", JSONB(), nullable=False, server_default=sa.text("'[]'::jsonb")
+        )
+    else:
+        article_ids_col = sa.Column(
+            "article_ids", sa.Text(), nullable=False, server_default=sa.text("'[]'")
+        )
 
     # Signals table
     op.create_table(
@@ -32,7 +47,7 @@ def upgrade() -> None:
         sa.Column("score", sa.Float(), nullable=False),
         sa.Column("summary", sa.Text(), nullable=True),
         sa.Column("detected_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.Column("article_ids", JSONB(), nullable=False, server_default=sa.text("'[]'::jsonb")),
+        article_ids_col,
     )
     op.create_index("ix_signals_detected_at", "signals", ["detected_at"])
     op.create_index("ix_signals_entity_id", "signals", ["entity_id"])

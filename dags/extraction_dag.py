@@ -27,7 +27,7 @@ def _failure_callback(context) -> None:
 
 @dag(
     dag_id="extraction_dag",
-    schedule=None,
+    schedule="0 */2 * * *",
     start_date=datetime(2024, 1, 1),
     catchup=False,
     default_args={"retries": 1, "on_failure_callback": _failure_callback},
@@ -270,12 +270,12 @@ def _process_article(article_id: str) -> dict:
         _persist_failed_run(article_id, error)
         _mark_article_failed(article_id)
         LOGGER.exception("Extraction failed for article %s: %s", article_id, error)
-        raise
+        return {"article_id": article_id, "status": "failed", "entities": 0, "topics": 0, "tokens": 0}
     except Exception as error:
         session.rollback()
         _mark_article_failed(article_id)
         LOGGER.exception("Extraction failed for article %s: %s", article_id, error)
-        raise
+        return {"article_id": article_id, "status": "failed", "entities": 0, "topics": 0, "tokens": 0}
     finally:
         session.close()
 

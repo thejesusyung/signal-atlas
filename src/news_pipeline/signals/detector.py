@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session
 
 from news_pipeline.config import get_settings
 from news_pipeline.db.models import ArticleEntity, ArticleTopic, Entity, RawArticle, Signal, Topic
-from jinja2 import Template
 
 from news_pipeline.llm.provider import LLMProvider, LLMTraceContext
 from news_pipeline.llm.prompts import PromptSpec
@@ -28,7 +27,7 @@ SIGNAL_BRIEF_PROMPT = PromptSpec(
         "Never speculate beyond what the headlines state. "
         "Return JSON only."
     ),
-    user_prompt_template=Template(
+    user_prompt_template=(
         """
 Generate a 2-3 sentence intelligence brief for this emerging signal.
 
@@ -45,10 +44,12 @@ Return JSON: {"summary": "2-3 sentence brief here."}
     ),
 )
 
-# Minimum number of ArticleEntity rows in the baseline window before we
-# attempt signal detection.  Below this threshold there is not enough history
-# to compute meaningful baselines.
-_MIN_BASELINE_ROWS = 10
+# Minimum baseline-window rows required before the corresponding signal type
+# is attempted.  Entity and topic thresholds are checked independently so that
+# a dataset with rich topic history but sparse entity data (or vice-versa)
+# still produces signals for the well-covered signal type.
+_MIN_ENTITY_BASELINE_ROWS = 10
+_MIN_TOPIC_BASELINE_ROWS = 10
 
 
 def detect_and_persist_signals(session: Session, provider: LLMProvider) -> list[Signal]:
@@ -57,23 +58,49 @@ def detect_and_persist_signals(session: Session, provider: LLMProvider) -> list[
     current_cutoff = now - timedelta(hours=settings.signal_current_window_hours)
     baseline_cutoff = now - timedelta(hours=settings.signal_baseline_window_hours)
 
-    baseline_row_count = session.scalar(
+    baseline_entity_row_count = session.scalar(
         select(func.count(ArticleEntity.article_id)).where(
             ArticleEntity.extracted_at >= baseline_cutoff,
             ArticleEntity.extracted_at < current_cutoff,
         )
     ) or 0
 
-    if baseline_row_count < _MIN_BASELINE_ROWS:
+    baseline_topic_row_count = session.scalar(
+        select(func.count(ArticleTopic.article_id))
+        .join(RawArticle, RawArticle.id == ArticleTopic.article_id)
+        .where(
+            RawArticle.ingested_at >= baseline_cutoff,
+            RawArticle.ingested_at < current_cutoff,
+        )
+    ) or 0
+
+    run_entity = baseline_entity_row_count >= _MIN_ENTITY_BASELINE_ROWS
+    run_topic = baseline_topic_row_count >= _MIN_TOPIC_BASELINE_ROWS
+
+    if not run_entity:
         LOGGER.info(
-            "Not enough baseline data (%d rows in last %d-%d h window) for signal detection; skipping",
-            baseline_row_count,
+            "Skipping entity signals: only %d entity baseline rows in %d-%d h window (need %d)",
+            baseline_entity_row_count,
             settings.signal_current_window_hours,
             settings.signal_baseline_window_hours,
+            _MIN_ENTITY_BASELINE_ROWS,
         )
+    if not run_topic:
+        LOGGER.info(
+            "Skipping topic signals: only %d topic baseline rows in %d-%d h window (need %d)",
+            baseline_topic_row_count,
+            settings.signal_current_window_hours,
+            settings.signal_baseline_window_hours,
+            _MIN_TOPIC_BASELINE_ROWS,
+        )
+
+    if not run_entity and not run_topic:
         return []
 
-    candidates = _score_candidates(session, now, current_cutoff, baseline_cutoff, settings)
+    candidates = _score_candidates(
+        session, now, current_cutoff, baseline_cutoff, settings,
+        run_entity=run_entity, run_topic=run_topic,
+    )
     top = candidates[: settings.signal_top_n]
 
     signals = []
@@ -95,7 +122,16 @@ def detect_and_persist_signals(session: Session, provider: LLMProvider) -> list[
     return signals
 
 
-def _score_candidates(session, now, current_cutoff, baseline_cutoff, settings) -> list[dict]:
+def _score_candidates(
+    session,
+    now,
+    current_cutoff,
+    baseline_cutoff,
+    settings,
+    *,
+    run_entity: bool = True,
+    run_topic: bool = True,
+) -> list[dict]:
     """Score per-entity and per-topic velocity in the current window vs the baseline window.
 
     Both windows cover the same number of hours so counts are directly comparable
@@ -106,106 +142,106 @@ def _score_candidates(session, now, current_cutoff, baseline_cutoff, settings) -
     candidates: list[dict] = []
     window_hours = settings.signal_current_window_hours
 
-    # ------------------------------------------------------------------ #
-    # Entity velocity                                                       #
-    # ------------------------------------------------------------------ #
-    current_entity_counts: dict[str, int] = {
-        str(row.entity_id): row.cnt
-        for row in session.execute(
-            select(ArticleEntity.entity_id, func.count(ArticleEntity.article_id).label("cnt"))
-            .where(ArticleEntity.extracted_at >= current_cutoff)
-            .group_by(ArticleEntity.entity_id)
-        ).all()
-    }
-
-    baseline_entity_counts: dict[str, int] = {
-        str(row.entity_id): row.cnt
-        for row in session.execute(
-            select(ArticleEntity.entity_id, func.count(ArticleEntity.article_id).label("cnt"))
-            .where(
-                ArticleEntity.extracted_at >= baseline_cutoff,
-                ArticleEntity.extracted_at < current_cutoff,
-            )
-            .group_by(ArticleEntity.entity_id)
-        ).all()
-    }
-
     # Normalise baseline to the same window length as current
     baseline_window_hours = settings.signal_baseline_window_hours
     normalisation = window_hours / max(baseline_window_hours - window_hours, 1)
 
-    entity_ids_to_check = set(current_entity_counts)
-    for entity_id_str in entity_ids_to_check:
-        current_cnt = current_entity_counts[entity_id_str]
-        raw_baseline = baseline_entity_counts.get(entity_id_str, 0)
-        baseline_rate = raw_baseline * normalisation
+    # ------------------------------------------------------------------ #
+    # Entity velocity                                                       #
+    # ------------------------------------------------------------------ #
+    if run_entity:
+        current_entity_counts: dict[str, int] = {
+            str(row.entity_id): row.cnt
+            for row in session.execute(
+                select(ArticleEntity.entity_id, func.count(ArticleEntity.article_id).label("cnt"))
+                .where(ArticleEntity.extracted_at >= current_cutoff)
+                .group_by(ArticleEntity.entity_id)
+            ).all()
+        }
 
-        z = _poisson_zscore(current_cnt, baseline_rate)
-        if z < settings.signal_zscore_threshold:
-            continue
+        baseline_entity_counts: dict[str, int] = {
+            str(row.entity_id): row.cnt
+            for row in session.execute(
+                select(ArticleEntity.entity_id, func.count(ArticleEntity.article_id).label("cnt"))
+                .where(
+                    ArticleEntity.extracted_at >= baseline_cutoff,
+                    ArticleEntity.extracted_at < current_cutoff,
+                )
+                .group_by(ArticleEntity.entity_id)
+            ).all()
+        }
 
-        entity_id = UUID(entity_id_str)
-        entity = session.get(Entity, entity_id)
-        if entity is None:
-            continue
+        for entity_id_str, current_cnt in current_entity_counts.items():
+            raw_baseline = baseline_entity_counts.get(entity_id_str, 0)
+            baseline_rate = raw_baseline * normalisation
 
-        article_ids = _get_entity_article_ids(session, entity_id, since=current_cutoff)
-        candidates.append({
-            "signal_type": "entity_velocity",
-            "entity_id": entity_id,
-            "topic_name": None,
-            "subject_name": entity.name,
-            "score": z,
-            "article_ids": article_ids,
-            "titles": _get_article_titles(session, article_ids),
-        })
+            z = _poisson_zscore(current_cnt, baseline_rate)
+            if z < settings.signal_zscore_threshold:
+                continue
+
+            entity_id = UUID(entity_id_str)
+            entity = session.get(Entity, entity_id)
+            if entity is None:
+                continue
+
+            article_ids = _get_entity_article_ids(session, entity_id, since=current_cutoff)
+            candidates.append({
+                "signal_type": "entity_velocity",
+                "entity_id": entity_id,
+                "topic_name": None,
+                "subject_name": entity.name,
+                "score": z,
+                "article_ids": article_ids,
+                "titles": _get_article_titles(session, article_ids),
+            })
 
     # ------------------------------------------------------------------ #
     # Topic velocity                                                        #
     # ------------------------------------------------------------------ #
-    current_topic_counts: dict[str, int] = {
-        row.name: row.cnt
-        for row in session.execute(
-            select(Topic.name, func.count(ArticleTopic.article_id).label("cnt"))
-            .join(ArticleTopic, ArticleTopic.topic_id == Topic.id)
-            .join(RawArticle, RawArticle.id == ArticleTopic.article_id)
-            .where(RawArticle.ingested_at >= current_cutoff)
-            .group_by(Topic.name)
-        ).all()
-    }
+    if run_topic:
+        current_topic_counts: dict[str, int] = {
+            row.name: row.cnt
+            for row in session.execute(
+                select(Topic.name, func.count(ArticleTopic.article_id).label("cnt"))
+                .join(ArticleTopic, ArticleTopic.topic_id == Topic.id)
+                .join(RawArticle, RawArticle.id == ArticleTopic.article_id)
+                .where(RawArticle.ingested_at >= current_cutoff)
+                .group_by(Topic.name)
+            ).all()
+        }
 
-    baseline_topic_counts: dict[str, int] = {
-        row.name: row.cnt
-        for row in session.execute(
-            select(Topic.name, func.count(ArticleTopic.article_id).label("cnt"))
-            .join(ArticleTopic, ArticleTopic.topic_id == Topic.id)
-            .join(RawArticle, RawArticle.id == ArticleTopic.article_id)
-            .where(
-                RawArticle.ingested_at >= baseline_cutoff,
-                RawArticle.ingested_at < current_cutoff,
-            )
-            .group_by(Topic.name)
-        ).all()
-    }
+        baseline_topic_counts: dict[str, int] = {
+            row.name: row.cnt
+            for row in session.execute(
+                select(Topic.name, func.count(ArticleTopic.article_id).label("cnt"))
+                .join(ArticleTopic, ArticleTopic.topic_id == Topic.id)
+                .join(RawArticle, RawArticle.id == ArticleTopic.article_id)
+                .where(
+                    RawArticle.ingested_at >= baseline_cutoff,
+                    RawArticle.ingested_at < current_cutoff,
+                )
+                .group_by(Topic.name)
+            ).all()
+        }
 
-    for topic_name, current_cnt in current_topic_counts.items():
-        raw_baseline = baseline_topic_counts.get(topic_name, 0)
-        baseline_rate = raw_baseline * normalisation
+        for topic_name, current_cnt in current_topic_counts.items():
+            raw_baseline = baseline_topic_counts.get(topic_name, 0)
+            baseline_rate = raw_baseline * normalisation
 
-        z = _poisson_zscore(current_cnt, baseline_rate)
-        if z < settings.signal_zscore_threshold:
-            continue
+            z = _poisson_zscore(current_cnt, baseline_rate)
+            if z < settings.signal_zscore_threshold:
+                continue
 
-        article_ids = _get_topic_article_ids(session, topic_name, since=current_cutoff)
-        candidates.append({
-            "signal_type": "topic_velocity",
-            "entity_id": None,
-            "topic_name": topic_name,
-            "subject_name": topic_name,
-            "score": z,
-            "article_ids": article_ids,
-            "titles": _get_article_titles(session, article_ids),
-        })
+            article_ids = _get_topic_article_ids(session, topic_name, since=current_cutoff)
+            candidates.append({
+                "signal_type": "topic_velocity",
+                "entity_id": None,
+                "topic_name": topic_name,
+                "subject_name": topic_name,
+                "score": z,
+                "article_ids": article_ids,
+                "titles": _get_article_titles(session, article_ids),
+            })
 
     candidates.sort(key=lambda c: c["score"], reverse=True)
     return candidates

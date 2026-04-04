@@ -84,7 +84,6 @@ class GroqProvider(LLMProvider):
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": prompt},
                         ],
-                        "response_format": {"type": "json_object"},
                     },
                 )
                 if response.status_code == 429:
@@ -175,6 +174,9 @@ class GroqProvider(LLMProvider):
                 span.set_attribute("latency_ms", llm_response.latency_ms)
                 span.set_attribute("model", llm_response.model)
                 span.set_attribute("attempts", len(attempts))
+                span.set_attribute("system_prompt", system_prompt)
+                span.set_attribute("prompt", prompt)
+                span.set_attribute("response", llm_response.text)
                 if trace_context is not None:
                     span.set_attribute("operation", trace_context.operation)
             return llm_response

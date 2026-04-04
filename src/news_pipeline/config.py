@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     )
 
     feeds_config_path: Path = Field(default=Path("config/feeds.yaml"), alias="FEEDS_CONFIG_PATH")
+    sim_writers_config_path: Path = Field(
+        default=Path("config/writers.yaml"), alias="SIM_WRITERS_CONFIG_PATH"
+    )
+    sim_personas_config_path: Path = Field(
+        default=Path("config/personas.yaml"), alias="SIM_PERSONAS_CONFIG_PATH"
+    )
     feed_state_path: Path = Field(default=Path("data/feed_state.json"), alias="FEED_STATE_PATH")
 
     ingestion_batch_size: int = Field(default=100, alias="INGESTION_BATCH_SIZE")
@@ -66,6 +72,12 @@ class Settings(BaseSettings):
     # Velocity windows for signal detection
     signal_current_window_hours: int = Field(default=24, alias="SIGNAL_CURRENT_WINDOW_HOURS")
     signal_baseline_window_hours: int = Field(default=72, alias="SIGNAL_BASELINE_WINDOW_HOURS")
+
+    mlflow_experiment_simulation: str = Field(
+        default="simulation_cycles", alias="MLFLOW_EXPERIMENT_SIMULATION"
+    )
+    sim_personas_per_tweet: int = Field(default=10, alias="SIM_PERSONAS_PER_TWEET")
+    sim_cycle_top_stories: int = Field(default=3, alias="SIM_CYCLE_TOP_STORIES")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

@@ -12,10 +12,10 @@ class PromptSpec:
     name: str
     version: str
     system_prompt: str
-    user_prompt_template: Template
+    user_prompt_template: str
 
     def render(self, **kwargs: Any) -> tuple[str, str]:
-        return self.system_prompt, self.user_prompt_template.render(**kwargs)
+        return self.system_prompt, Template(self.user_prompt_template).render(**kwargs)
 
 
 ENTITY_EXTRACTION_PROMPT = PromptSpec(
@@ -25,7 +25,7 @@ ENTITY_EXTRACTION_PROMPT = PromptSpec(
         "You extract named entities from news articles. "
         "Return JSON only. Never include prose."
     ),
-    user_prompt_template=Template(
+    user_prompt_template=(
         """
 Extract named entities from the article below.
 
@@ -66,7 +66,7 @@ TOPIC_CLASSIFICATION_PROMPT = PromptSpec(
         "You classify news articles into topics. "
         "Return JSON only. Prefer the most relevant 1 to 3 labels."
     ),
-    user_prompt_template=Template(
+    user_prompt_template=(
         """
 Classify the article into one to three topics from this fixed list:
 {{ topic_labels|join(", ") }}
@@ -92,7 +92,7 @@ JSON_REPAIR_PROMPT = PromptSpec(
     name="json_repair",
     version="json_fix_v1",
     system_prompt="You repair invalid JSON. Return valid JSON only.",
-    user_prompt_template=Template(
+    user_prompt_template=(
         """
 The following model output should be JSON but is invalid.
 Convert it to valid JSON while preserving the intended structure.

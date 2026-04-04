@@ -395,8 +395,15 @@ def test_extraction_dag_rolls_back_partial_state(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(extraction_dag, "GroqProvider", lambda: provider)
 
-    with pytest.raises(Exception):
-        extraction_dag._process_article(str(article_id))
+    result = extraction_dag._process_article(str(article_id))
+
+    # A single failed article must NOT raise — it returns a structured failure
+    # so that other mapped task instances and all downstream tasks still run.
+    assert result["article_id"] == str(article_id)
+    assert result["status"] == "failed"
+    assert result["entities"] == 0
+    assert result["topics"] == 0
+    assert result["tokens"] == 0
 
     session = SessionLocal()
     try:
@@ -410,3 +417,36 @@ def test_extraction_dag_rolls_back_partial_state(monkeypatch, tmp_path):
     finally:
         session.close()
         engine.dispose()
+
+
+def test_process_article_failure_result_is_compatible_with_log_batch():
+    """A failure result from _process_article must be compatible with log_batch metrics.
+
+    log_batch filters results with `if item` and sums numeric fields.  A failed
+    article returns a dict that is truthy and carries zeroed counters — this test
+    verifies the shape is correct so no KeyError or TypeError occurs downstream.
+    """
+    # Simulate what log_batch receives for a mixed batch: 2 successes, 1 failure.
+    results = [
+        {"article_id": "aaa", "status": "extracted", "entities": 3, "topics": 2, "tokens": 120},
+        {"article_id": "bbb", "status": "extracted", "entities": 1, "topics": 1, "tokens":  80},
+        {"article_id": "ccc", "status": "failed",    "entities": 0, "topics": 0, "tokens":   0},
+    ]
+
+    # Reproduce the exact aggregation that log_batch performs.
+    processed = [item for item in results if item]
+    metrics = {
+        "articles_processed": len(processed),
+        "articles_extracted": sum(1 for item in processed if item["status"] == "extracted"),
+        "articles_failed":    sum(1 for item in processed if item["status"] == "failed"),
+        "entity_count":       sum(item["entities"] for item in processed),
+        "topic_count":        sum(item["topics"]   for item in processed),
+        "tokens_used":        sum(item["tokens"]   for item in processed),
+    }
+
+    assert metrics["articles_processed"] == 3
+    assert metrics["articles_extracted"] == 2
+    assert metrics["articles_failed"] == 1
+    assert metrics["entity_count"] == 4
+    assert metrics["topic_count"] == 3
+    assert metrics["tokens_used"] == 200

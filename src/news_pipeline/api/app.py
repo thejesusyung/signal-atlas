@@ -24,11 +24,13 @@ from news_pipeline.services.article_service import (
     pipeline_stats,
 )
 from news_pipeline.services.signal_service import get_latest_signals
+from news_pipeline.api.simulation import router as simulation_router
 
 _STATIC = Path(__file__).parent / "static"
 
 settings = get_settings()
 app = FastAPI(title="News Intelligence Pipeline API", version="0.1.0")
+app.include_router(simulation_router)
 
 
 @app.get("/brief")

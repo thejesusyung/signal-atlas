@@ -7,6 +7,7 @@ from sqlalchemy import engine_from_config, pool
 
 from news_pipeline.config import get_settings
 from news_pipeline.db.models import Base
+import news_pipeline.simulation.models  # noqa: F401 — registers sim tables with Base.metadata
 
 config = context.config
 
