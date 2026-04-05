@@ -38,10 +38,12 @@ def get_latest_cycle_with_leaderboard(session: Session) -> dict[str, Any] | None
 
     leaderboard = _cycle_leaderboard(session, cycle.id, cycle.cycle_number)
     mutations = _mutations_for_cycle(session, cycle.cycle_number)
+    tweets = _tweets_for_cycle(session, cycle.id)
 
     return {
         "cycle": _serialize_cycle(cycle),
         "leaderboard": leaderboard,
+        "tweets": tweets,
         "mutations": mutations,
     }
 
@@ -99,39 +101,7 @@ def get_cycle_detail(session: Session, cycle_number: int) -> dict[str, Any] | No
         return None
 
     # Single query: tweets + engagement counts via conditional aggregation
-    rows = session.execute(
-        select(
-            SimTweet.id.label("tweet_id"),
-            SimTweet.content,
-            SimWriter.name.label("writer_name"),
-            SimPromptVersion.version_number.label("prompt_version"),
-            func.count(
-                case((SimEngagement.action == "repost", 1))
-            ).label("repost_count"),
-            func.count(
-                case((SimEngagement.action == "like", 1))
-            ).label("like_count"),
-            func.count(
-                case((SimEngagement.action == "comment", 1))
-            ).label("comment_count"),
-            func.count(
-                case((SimEngagement.action == "skip", 1))
-            ).label("skip_count"),
-        )
-        .join(SimWriter, SimTweet.writer_id == SimWriter.id)
-        .outerjoin(SimEngagement, SimEngagement.tweet_id == SimTweet.id)
-        .outerjoin(SimPromptVersion, SimTweet.prompt_version_id == SimPromptVersion.id)
-        .where(SimTweet.cycle_id == cycle.id)
-        .group_by(
-            SimTweet.id,
-            SimTweet.content,
-            SimWriter.name,
-            SimPromptVersion.version_number,
-        )
-        .order_by(SimWriter.name, SimTweet.created_at)
-    ).all()
-
-    tweets = [_serialize_tweet_row(row) for row in rows]
+    tweets = _tweets_for_cycle(session, cycle.id)
     leaderboard = _cycle_leaderboard(session, cycle.id, cycle.cycle_number)
 
     return {
@@ -258,6 +228,41 @@ def get_writer_evolution(session: Session, writer_name: str) -> dict[str, Any] |
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
+
+
+def _tweets_for_cycle(session: Session, cycle_uuid: UUID) -> list[dict[str, Any]]:
+    rows = session.execute(
+        select(
+            SimTweet.id.label("tweet_id"),
+            SimTweet.content,
+            SimWriter.name.label("writer_name"),
+            SimPromptVersion.version_number.label("prompt_version"),
+            func.count(
+                case((SimEngagement.action == "repost", 1))
+            ).label("repost_count"),
+            func.count(
+                case((SimEngagement.action == "like", 1))
+            ).label("like_count"),
+            func.count(
+                case((SimEngagement.action == "comment", 1))
+            ).label("comment_count"),
+            func.count(
+                case((SimEngagement.action == "skip", 1))
+            ).label("skip_count"),
+        )
+        .join(SimWriter, SimTweet.writer_id == SimWriter.id)
+        .outerjoin(SimEngagement, SimEngagement.tweet_id == SimTweet.id)
+        .outerjoin(SimPromptVersion, SimTweet.prompt_version_id == SimPromptVersion.id)
+        .where(SimTweet.cycle_id == cycle_uuid)
+        .group_by(
+            SimTweet.id,
+            SimTweet.content,
+            SimWriter.name,
+            SimPromptVersion.version_number,
+        )
+        .order_by(SimWriter.name, SimTweet.created_at)
+    ).all()
+    return [_serialize_tweet_row(row) for row in rows]
 
 
 def _cycle_leaderboard(
