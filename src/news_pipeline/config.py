@@ -76,8 +76,9 @@ class Settings(BaseSettings):
     mlflow_experiment_simulation: str = Field(
         default="simulation_cycles", alias="MLFLOW_EXPERIMENT_SIMULATION"
     )
-    sim_personas_per_tweet: int = Field(default=10, alias="SIM_PERSONAS_PER_TWEET")
-    sim_cycle_top_stories: int = Field(default=3, alias="SIM_CYCLE_TOP_STORIES")
+    sim_personas_per_tweet: int = Field(default=60, alias="SIM_PERSONAS_PER_TWEET")
+    sim_cycle_top_stories: int = Field(default=6, alias="SIM_CYCLE_TOP_STORIES")
+    sim_bottom_n_mutate: int = Field(default=3, alias="SIM_BOTTOM_N_MUTATE")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
