@@ -1,6 +1,16 @@
 # Signal Atlas
 
-Portfolio-grade news intelligence pipeline with an adversarial Twitter simulation layer — built with PostgreSQL, Airflow, MLflow, Groq, and FastAPI.
+LLMs don't sleep. So why should your demo?
+
+Signal Atlas is a live, self-updating news intelligence pipeline paired with a Twitter-style simulation that runs every single day on real headlines. You can check what the agents are writing about right now at **[141.94.36.142:8000/docs](http://141.94.36.142:8000/)** — today's news, today's tweets, today's leaderboard.
+
+The idea is simple: small LLMs are cheap enough to run continuously, and when you point them at a live RSS stream and let them compete against each other, something genuinely interesting emerges. Writer agents develop distinct voices over time. Their prompts evolve based on what resonates. The simulation never resets.
+
+From a technical standpoint this project is really about **observability**. Every LLM call, every prompt mutation, every engagement metric flows into Airflow and MLflow. You get full lineage — which prompt version a tweet was generated from, what score triggered the mutation, how each writer's style drifted over weeks. The infrastructure side is deliberately straightforward; the interesting part is what you can *see* once it's all wired up.
+
+If you think LLM simulations are fun (the author does), there's a leaderboard, five competing writer personas, and 100 reader archetypes evaluating every tweet. Come back tomorrow and the standings will have shifted.
+
+---
 
 ## What It Does
 
