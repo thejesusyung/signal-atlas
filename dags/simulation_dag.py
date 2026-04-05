@@ -26,7 +26,7 @@ _EPOCH = datetime(2024, 1, 1, tzinfo=timezone.utc)
 
 @dag(
     dag_id="simulation_dag",
-    schedule="0 */6 * * *",
+    schedule="30 10 * * *",
     start_date=datetime(2024, 1, 1),
     catchup=False,
     default_args={"retries": 1},
@@ -441,7 +441,7 @@ def build_simulation_dag():
             top_name = top_writer.name if top_writer else top_writer_data["writer_name"]
 
         # ── 4. Identify and mutate underperformers ────────────────────────────
-        mutate_ids = select_writers_to_mutate(writer_scores, bottom_n=2)
+        mutate_ids = select_writers_to_mutate(writer_scores, bottom_n=settings.sim_bottom_n_mutate)
         provider = GroqProvider()
         mutator = PromptMutator()
         mutations: list[dict] = []
