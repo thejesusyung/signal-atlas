@@ -103,11 +103,13 @@ def get_cycle_detail(session: Session, cycle_number: int) -> dict[str, Any] | No
     # Single query: tweets + engagement counts via conditional aggregation
     tweets = _tweets_for_cycle(session, cycle.id)
     leaderboard = _cycle_leaderboard(session, cycle.id, cycle.cycle_number)
+    mutations = _mutations_for_cycle(session, cycle.cycle_number)
 
     return {
         "cycle": _serialize_cycle(cycle),
         "leaderboard": leaderboard,
         "tweets": tweets,
+        "mutations": mutations,
     }
 
 

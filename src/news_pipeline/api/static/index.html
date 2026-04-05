@@ -1419,8 +1419,11 @@ function initSimView() {
     .then(r => r.ok ? r.json() : Promise.reject(r.status))
     .then(data => {
       simCycleMax = data.cycle.cycle_number;
-      renderSimCycle(data);
+      // Always fetch the full cycle detail so tweets are guaranteed to be present
+      return fetch(`/simulation/cycles/${simCycleMax}`)
+        .then(r => r.ok ? r.json() : Promise.reject(r.status));
     })
+    .then(data => renderSimCycle(data))
     .catch(code => {
       const el = document.getElementById('sim-lb-loading');
       if (el) el.textContent = code === 404
