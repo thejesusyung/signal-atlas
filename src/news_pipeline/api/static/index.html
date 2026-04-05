@@ -8,35 +8,32 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #060a14;
+      background: #f1f5f9;
       font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
-      color: #e2e8f0;
+      color: #0f172a;
       overflow: hidden;
       width: 100vw;
       height: 100vh;
     }
 
-    /* ── Graph ── */
+    /* ── Graph (preserved, hidden in sim-only mode) ── */
     #canvas { width: 100%; height: 100%; }
-
     .link { stroke-linecap: round; transition: stroke-opacity 0.2s; }
     .link.dim { stroke-opacity: 0.03 !important; }
     .link.highlight { stroke-opacity: 0.75 !important; }
-
     .node-entity circle { cursor: pointer; transition: filter 0.15s; }
-    .node-entity:hover circle { filter: brightness(1.4); }
+    .node-entity:hover circle { filter: brightness(1.15); }
     .node-topic circle { cursor: pointer; }
-
     .label-topic {
-      fill: #f1f5f9; font-size: 11px; font-weight: 800;
+      fill: #1e293b; font-size: 11px; font-weight: 800;
       letter-spacing: 0.07em; text-transform: uppercase;
       pointer-events: none; text-anchor: middle; dominant-baseline: central;
-      paint-order: stroke; stroke: #060a14; stroke-width: 3px; stroke-linejoin: round;
+      paint-order: stroke; stroke: #f8fafc; stroke-width: 3px; stroke-linejoin: round;
     }
     .label-entity {
-      fill: #94a3b8; font-size: 9.5px; font-weight: 500;
+      fill: #64748b; font-size: 9.5px; font-weight: 500;
       pointer-events: none; text-anchor: middle;
-      paint-order: stroke; stroke: #060a14; stroke-width: 2.5px; stroke-linejoin: round;
+      paint-order: stroke; stroke: #f8fafc; stroke-width: 2.5px; stroke-linejoin: round;
     }
 
     @keyframes pulse-ring {
@@ -48,10 +45,10 @@
     /* ── Tooltip ── */
     #tip {
       position: fixed; z-index: 200;
-      background: rgba(8,12,24,0.95); border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.97); border: 1px solid #e2e8f0;
       border-radius: 10px; padding: 12px 16px;
       pointer-events: none; opacity: 0; transition: opacity 0.1s ease;
-      backdrop-filter: blur(14px); max-width: 230px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.10); max-width: 230px;
     }
     #tip.show { opacity: 1; }
     .tip-badge {
@@ -59,91 +56,77 @@
       font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
       text-transform: uppercase; margin-bottom: 7px;
     }
-    .tip-name { font-weight: 700; color: #f1f5f9; font-size: 14px; margin-bottom: 4px; }
+    .tip-name { font-weight: 700; color: #0f172a; font-size: 14px; margin-bottom: 4px; }
     .tip-row { color: #64748b; font-size: 12px; line-height: 1.7; }
-    .tip-row b { color: #94a3b8; font-weight: 600; }
+    .tip-row b { color: #475569; font-weight: 600; }
     .tip-heat { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
 
-    /* ── Signals Sidebar ── */
+    /* ── Signals Sidebar (preserved, hidden in sim) ── */
     #signals-sidebar {
       position: fixed; top: 0; left: 0; bottom: 40px;
       width: 260px; z-index: 50;
-      background: rgba(6,8,16,0.98);
-      border-right: 1px solid rgba(255,255,255,0.07);
-      backdrop-filter: blur(16px);
+      background: #ffffff; border-right: 1px solid #e2e8f0;
       transform: translateX(0);
       transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
       display: flex; flex-direction: row;
     }
     body:not(.sidebar-open) #signals-sidebar { transform: translateX(-260px); }
-
     #signals-sidebar-inner {
       flex: 1; overflow-y: auto; padding: 16px 14px;
       display: flex; flex-direction: column;
     }
     #signals-sidebar-inner::-webkit-scrollbar { width: 3px; }
-    #signals-sidebar-inner::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
-
+    #signals-sidebar-inner::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
     #signals-sidebar-toggle {
-      position: absolute; top: 50%; right: -26px;
-      transform: translateY(-50%);
-      width: 26px; height: 52px;
-      background: rgba(6,8,16,0.98);
-      border: 1px solid rgba(255,255,255,0.07); border-left: none;
-      border-radius: 0 8px 8px 0;
-      color: #475569; font-size: 13px; cursor: pointer;
+      position: absolute; top: 50%; right: -26px; transform: translateY(-50%);
+      width: 26px; height: 52px; background: #ffffff;
+      border: 1px solid #e2e8f0; border-left: none; border-radius: 0 8px 8px 0;
+      color: #94a3b8; font-size: 13px; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: color 0.15s; z-index: 51;
     }
-    #signals-sidebar-toggle:hover { color: #94a3b8; }
-
+    #signals-sidebar-toggle:hover { color: #64748b; }
     #signals-sidebar-hdr {
       display: flex; align-items: center; gap: 8px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      margin-bottom: 12px; flex-shrink: 0;
+      padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; margin-bottom: 12px; flex-shrink: 0;
     }
-    #signals-sidebar-title { font-size: 9px; font-weight: 800; letter-spacing: 0.14em; color: #334155; flex: 1; }
+    #signals-sidebar-title { font-size: 9px; font-weight: 800; letter-spacing: 0.14em; color: #94a3b8; flex: 1; }
     #signals-sidebar-badge {
       font-size: 10px; padding: 1px 8px; border-radius: 99px;
-      background: #7c3aed22; color: #a78bfa; border: 1px solid #7c3aed44; display: none;
+      background: #ede9fe; color: #7c3aed; border: 1px solid #ddd6fe; display: none;
     }
-    #signals-sidebar-empty { font-size: 11px; color: #1e293b; padding: 4px 0; }
-
-    /* Signal cards v2 */
+    #signals-sidebar-empty { font-size: 11px; color: #cbd5e1; padding: 4px 0; }
     .signal-card-v2 {
       border-radius: 10px; padding: 11px 13px; margin-bottom: 10px;
-      border: 1px solid rgba(255,255,255,0.07); cursor: pointer;
-      transition: border-color 0.15s, filter 0.15s; flex-shrink: 0;
+      border: 1px solid #e2e8f0; cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s; flex-shrink: 0;
     }
-    .signal-card-v2:hover { filter: brightness(1.18); }
+    .signal-card-v2:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
     .signal-card-v2:last-child { margin-bottom: 0; }
-    .signal-card-v2.urgency-red    { background: rgba(239,68,68,0.08);  border-color: rgba(239,68,68,0.28); }
-    .signal-card-v2.urgency-orange { background: rgba(249,115,22,0.08); border-color: rgba(249,115,22,0.28); }
-    .signal-card-v2.urgency-yellow { background: rgba(234,179,8,0.08);  border-color: rgba(234,179,8,0.28); }
-    .signal-card-v2.urgency-muted  { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); }
+    .signal-card-v2.urgency-red    { background: #fef2f2; border-color: #fecaca; }
+    .signal-card-v2.urgency-orange { background: #fff7ed; border-color: #fed7aa; }
+    .signal-card-v2.urgency-yellow { background: #fefce8; border-color: #fde68a; }
+    .signal-card-v2.urgency-muted  { background: #f8fafc; border-color: #e2e8f0; }
     .sig2-type { font-size: 9px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 4px; }
-    .urgency-red .sig2-type    { color: #f87171; }
-    .urgency-orange .sig2-type { color: #fb923c; }
-    .urgency-yellow .sig2-type { color: #facc15; }
-    .urgency-muted .sig2-type  { color: #a78bfa; }
-    .sig2-subject { font-size: 12.5px; font-weight: 700; color: #f1f5f9; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .urgency-red .sig2-type    { color: #ef4444; }
+    .urgency-orange .sig2-type { color: #f97316; }
+    .urgency-yellow .sig2-type { color: #ca8a04; }
+    .urgency-muted .sig2-type  { color: #7c3aed; }
+    .sig2-subject { font-size: 12.5px; font-weight: 700; color: #0f172a; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sig2-summary { font-size: 11px; color: #64748b; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px; }
     .sig2-score-row { display: flex; align-items: center; gap: 7px; }
-    .sig2-bar-wrap { flex: 1; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+    .sig2-bar-wrap { flex: 1; height: 3px; background: #f1f5f9; border-radius: 2px; overflow: hidden; }
     .sig2-bar { height: 100%; border-radius: 2px; }
-    .urgency-red .sig2-bar    { background: #f87171; }
-    .urgency-orange .sig2-bar { background: #fb923c; }
-    .urgency-yellow .sig2-bar { background: #facc15; }
-    .urgency-muted .sig2-bar  { background: #64748b; }
-    .sig2-score-num { font-size: 10px; color: #334155; flex-shrink: 0; }
-
-    /* Layout shifts when sidebar open */
+    .urgency-red .sig2-bar    { background: #ef4444; }
+    .urgency-orange .sig2-bar { background: #f97316; }
+    .urgency-yellow .sig2-bar { background: #ca8a04; }
+    .urgency-muted .sig2-bar  { background: #94a3b8; }
+    .sig2-score-num { font-size: 10px; color: #94a3b8; flex-shrink: 0; }
     body.sidebar-open #header    { left: 260px; }
     body.sidebar-open #feed-view { left: 260px; }
     body.sidebar-open #legend    { left: 284px; }
 
-    /* ── Header ── */
+    /* ── Header (graph/feed views, preserved) ── */
     #header {
       position: fixed; top: 0; left: 0; right: 0;
       padding: 16px 24px; display: flex; align-items: center; gap: 14px;
@@ -151,237 +134,202 @@
       transition: left 0.28s cubic-bezier(0.4,0,0.2,1);
     }
     #header-title { flex-shrink: 0; }
-    #header h1 { font-size: 17px; font-weight: 800; letter-spacing: -0.04em; color: #f8fafc; }
-    #header .sub { font-size: 10px; color: #334155; margin-top: 2px; }
+    #header h1 { font-size: 17px; font-weight: 800; letter-spacing: -0.04em; color: #0f172a; }
+    #header .sub { font-size: 10px; color: #94a3b8; margin-top: 2px; }
     #stats-panel { text-align: right; flex-shrink: 0; }
-    .stat { font-size: 10.5px; color: #334155; line-height: 1.9; }
+    .stat { font-size: 10.5px; color: #94a3b8; line-height: 1.9; }
     .stat b { color: #64748b; font-weight: 600; }
-
-    /* ── Graph search ── */
     #graph-search-wrap {
       flex: 1; display: flex; align-items: center; gap: 7px;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
-      border-radius: 8px; padding: 5px 12px; pointer-events: auto;
-      max-width: 320px;
+      background: #ffffff; border: 1px solid #e2e8f0;
+      border-radius: 8px; padding: 5px 12px; pointer-events: auto; max-width: 320px;
     }
     body.view-feed #graph-search-wrap { display: none; }
-    #graph-search-icon { color: #334155; font-size: 15px; flex-shrink: 0; line-height: 1; }
-    #graph-search-input {
-      background: none; border: none; outline: none;
-      color: #e2e8f0; font-size: 12px; width: 100%; font-family: inherit;
-    }
-    #graph-search-input::placeholder { color: #334155; }
-    #graph-search-clear {
-      background: none; border: none; color: #334155; cursor: pointer;
-      font-size: 16px; padding: 0; line-height: 1; flex-shrink: 0;
-    }
+    #graph-search-icon { color: #94a3b8; font-size: 15px; flex-shrink: 0; line-height: 1; }
+    #graph-search-input { background: none; border: none; outline: none; color: #0f172a; font-size: 12px; width: 100%; font-family: inherit; }
+    #graph-search-input::placeholder { color: #94a3b8; }
+    #graph-search-clear { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px; padding: 0; line-height: 1; flex-shrink: 0; }
     #graph-search-clear:hover { color: #64748b; }
-
-    /* ── View toggle ── */
-    #view-toggle-wrap { pointer-events: auto; flex-shrink: 0; }
-    .view-toggle-btn {
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 8px; color: #94a3b8; font-size: 12px; font-weight: 700;
-      letter-spacing: 0.05em; padding: 6px 14px; cursor: pointer;
-      display: flex; align-items: center; gap: 6px;
+    #view-toggle-wrap { pointer-events: auto; flex-shrink: 0; display: flex; gap: 4px; }
+    .vtb {
+      background: #ffffff; border: 1px solid #e2e8f0;
+      border-radius: 8px; color: #64748b; font-size: 12px; font-weight: 700;
+      letter-spacing: 0.05em; padding: 6px 14px; cursor: pointer; font-family: inherit;
       transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
-    .view-toggle-btn:hover { background: rgba(255,255,255,0.08); color: #f1f5f9; border-color: rgba(255,255,255,0.18); }
-    body.view-feed .view-toggle-btn { background: rgba(129,140,248,0.12); border-color: rgba(129,140,248,0.35); color: #818cf8; }
+    .vtb:hover { background: #f8fafc; color: #0f172a; border-color: #cbd5e1; }
+    .vtb.active { background: #eef2ff; border-color: #c7d2fe; color: #6366f1; }
 
     /* ── Legend ── */
     #legend {
       position: fixed; bottom: 56px; left: 24px; z-index: 10;
-      background: rgba(8,12,24,0.72); border: 1px solid rgba(255,255,255,0.05);
-      border-radius: 12px; padding: 14px 18px; backdrop-filter: blur(12px);
+      background: rgba(255,255,255,0.92); border: 1px solid #e2e8f0;
+      border-radius: 12px; padding: 14px 18px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
       transition: left 0.28s cubic-bezier(0.4,0,0.2,1);
     }
     .leg-section { margin-bottom: 12px; }
     .leg-section:last-child { margin-bottom: 0; }
-    .leg-title { font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #334155; margin-bottom: 7px; }
+    .leg-title { font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; margin-bottom: 7px; }
     .leg-item { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: #64748b; margin-bottom: 4px; }
     .leg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    #recency-bar {
-      width: 100%; height: 4px; border-radius: 2px;
-      background: linear-gradient(to right, #374151, #64748b, #eab308, #f97316, #ef4444);
-      margin-bottom: 4px;
-    }
-    .recency-labels { display: flex; justify-content: space-between; font-size: 9px; color: #334155; }
-
-    #hint { position: fixed; bottom: 56px; right: 24px; font-size: 10.5px; color: #1e293b; z-index: 10; }
+    #recency-bar { width: 100%; height: 4px; border-radius: 2px; background: linear-gradient(to right, #374151, #64748b, #eab308, #f97316, #ef4444); margin-bottom: 4px; }
+    .recency-labels { display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8; }
+    #hint { position: fixed; bottom: 56px; right: 24px; font-size: 10.5px; color: #cbd5e1; z-index: 10; }
 
     /* ── Article panel ── */
     #panel {
       position: fixed; top: 0; right: 0; bottom: 40px;
       width: 340px; z-index: 100;
-      background: rgba(7,10,20,0.97); border-left: 1px solid rgba(255,255,255,0.07);
+      background: #ffffff; border-left: 1px solid #e2e8f0;
       transform: translateX(100%); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
-      display: flex; flex-direction: column; backdrop-filter: blur(18px);
+      display: flex; flex-direction: column;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.06);
     }
     #panel.open { transform: translateX(0); }
     #panel-head {
       display: flex; align-items: flex-start; justify-content: space-between;
-      padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0;
+      padding: 20px 20px 16px; border-bottom: 1px solid #f1f5f9; flex-shrink: 0;
     }
     #panel-badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
-    #panel-title { font-size: 16px; font-weight: 700; color: #f1f5f9; line-height: 1.3; }
-    #panel-count { font-size: 11px; color: #475569; margin-top: 4px; }
-    #panel-close { background: none; border: none; color: #475569; font-size: 20px; cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0; margin-left: 12px; margin-top: -2px; }
-    #panel-close:hover { color: #94a3b8; }
+    #panel-title { font-size: 16px; font-weight: 700; color: #0f172a; line-height: 1.3; }
+    #panel-count { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+    #panel-close { background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0; margin-left: 12px; margin-top: -2px; }
+    #panel-close:hover { color: #475569; }
     #panel-body { flex: 1; overflow-y: auto; padding: 12px 0; }
     #panel-body::-webkit-scrollbar { width: 4px; }
     #panel-body::-webkit-scrollbar-track { background: transparent; }
-    #panel-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
-    .article-card { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
-    .article-card:hover { background: rgba(255,255,255,0.03); }
+    #panel-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 2px; }
+    .article-card { padding: 12px 20px; border-bottom: 1px solid #f8fafc; transition: background 0.15s; }
+    .article-card:hover { background: #f8fafc; }
     .article-card:last-child { border-bottom: none; }
     .card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-    .card-source { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #475569; }
-    .card-age { font-size: 10px; color: #334155; }
+    .card-source { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #94a3b8; }
+    .card-age { font-size: 10px; color: #cbd5e1; }
     .card-heat { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-    .card-title { display: block; font-size: 13px; font-weight: 500; color: #cbd5e1; line-height: 1.45; text-decoration: none; }
-    .card-title:hover { color: #f1f5f9; }
-    #panel-loading { padding: 32px 20px; color: #334155; font-size: 13px; text-align: center; }
+    .card-title { display: block; font-size: 13px; font-weight: 500; color: #475569; line-height: 1.45; text-decoration: none; }
+    .card-title:hover { color: #0f172a; }
+    #panel-loading { padding: 32px 20px; color: #94a3b8; font-size: 13px; text-align: center; }
     .panel-feed-btn {
-      background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.25);
-      border-radius: 7px; color: #818cf8; font-size: 11.5px; font-weight: 600;
+      background: #eef2ff; border: 1px solid #c7d2fe;
+      border-radius: 7px; color: #6366f1; font-size: 11.5px; font-weight: 600;
       padding: 7px 14px; cursor: pointer; width: 100%; font-family: inherit;
       transition: background 0.15s;
     }
-    .panel-feed-btn:hover { background: rgba(129,140,248,0.16); }
+    .panel-feed-btn:hover { background: #e0e7ff; }
 
     /* ── Ticker ── */
     #ticker {
       position: fixed; bottom: 0; left: 0; right: 0; height: 40px; z-index: 150;
-      background: rgba(6,8,16,0.92); border-top: 1px solid rgba(255,255,255,0.05);
-      display: flex; align-items: center; backdrop-filter: blur(10px); overflow: hidden;
+      background: #ffffff; border-top: 1px solid #e2e8f0;
+      display: flex; align-items: center; overflow: hidden;
     }
-    #ticker-label { flex-shrink: 0; padding: 0 14px; font-size: 9px; font-weight: 800; letter-spacing: 0.14em; color: #1e293b; border-right: 1px solid rgba(255,255,255,0.05); height: 100%; display: flex; align-items: center; }
+    #ticker-label {
+      flex-shrink: 0; padding: 0 14px;
+      font-size: 9px; font-weight: 800; letter-spacing: 0.14em; color: #22c55e;
+      border-right: 1px solid #e2e8f0; height: 100%; display: flex; align-items: center; gap: 6px;
+    }
+    #ticker-label::before {
+      content: ''; display: inline-block; width: 6px; height: 6px;
+      border-radius: 50%; background: #22c55e;
+      animation: live-pulse 1.8s ease-in-out infinite;
+    }
     #ticker-track { flex: 1; overflow: hidden; position: relative; height: 100%; }
     #ticker-inner { display: flex; align-items: center; height: 100%; white-space: nowrap; will-change: transform; }
-    .ticker-item { display: inline-flex; align-items: center; gap: 8px; padding: 0 28px; font-size: 12px; color: #475569; flex-shrink: 0; }
+    .ticker-item { display: inline-flex; align-items: center; gap: 8px; padding: 0 28px; font-size: 12px; color: #64748b; flex-shrink: 0; }
     .ticker-item .t-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-    .ticker-item .t-source { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; flex-shrink: 0; }
-    .ticker-item .t-title { color: #4b5563; }
-    .ticker-item .t-age { font-size: 10px; color: #1f2937; flex-shrink: 0; }
-    .ticker-sep { color: #1e293b; padding: 0 8px; flex-shrink: 0; font-size: 16px; line-height: 1; }
+    .ticker-item .t-source { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #94a3b8; flex-shrink: 0; }
+    .ticker-item .t-title { color: #475569; }
+    .ticker-item .t-age { font-size: 10px; color: #94a3b8; flex-shrink: 0; }
+    .ticker-sep { color: #e2e8f0; padding: 0 8px; flex-shrink: 0; font-size: 16px; line-height: 1; }
 
-    #loading-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #334155; z-index: 300; }
+    #loading-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #94a3b8; z-index: 300; }
 
-    /* ── Feed view container ── */
+    /* ── Feed view (preserved, hidden) ── */
     #feed-view {
       position: fixed; top: 0; left: 0; right: 0; bottom: 40px;
-      z-index: 5; background: #060a14;
+      z-index: 5; background: #f8fafc;
       display: flex; flex-direction: column;
       opacity: 0; visibility: hidden; pointer-events: none;
       transition: opacity 0.22s ease, left 0.28s cubic-bezier(0.4,0,0.2,1);
     }
     body.view-feed #feed-view { opacity: 1; visibility: visible; pointer-events: auto; }
-
-    /* ── Hide graph-only elements in feed mode ── */
     body.view-feed #canvas  { pointer-events: none; }
     body.view-feed #legend  { display: none; }
     body.view-feed #hint    { display: none; }
     body.view-feed #tip     { display: none !important; }
     body.view-feed #panel   { display: none; }
-
-    /* ── Feed pills wrap ── */
     #feed-pills-wrap {
       flex-shrink: 0; padding: 12px 24px 10px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      background: rgba(6,10,20,0.92); backdrop-filter: blur(10px);
+      border-bottom: 1px solid #e2e8f0; background: #ffffff;
     }
-
-    /* ── Feed source badge (cross-view breadcrumb) ── */
     #feed-source-badge { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; }
-    #feed-back-btn { background: none; border: none; color: #475569; font-size: 11px; font-weight: 600; cursor: pointer; padding: 0; font-family: inherit; transition: color 0.15s; }
-    #feed-back-btn:hover { color: #94a3b8; }
-    #feed-source-label { font-size: 11px; color: #334155; }
-
-    /* ── Feed search ── */
+    #feed-back-btn { background: none; border: none; color: #94a3b8; font-size: 11px; font-weight: 600; cursor: pointer; padding: 0; font-family: inherit; transition: color 0.15s; }
+    #feed-back-btn:hover { color: #64748b; }
+    #feed-source-label { font-size: 11px; color: #94a3b8; }
     #feed-search-row { padding-bottom: 10px; }
     #feed-search-wrap {
       display: flex; align-items: center; gap: 8px;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
-      border-radius: 8px; padding: 7px 14px;
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 14px;
     }
-    #feed-search-icon { color: #334155; font-size: 15px; flex-shrink: 0; line-height: 1; }
-    #feed-search-input { background: none; border: none; outline: none; color: #e2e8f0; font-size: 12.5px; flex: 1; font-family: inherit; }
-    #feed-search-input::placeholder { color: #334155; }
-    #feed-search-clear { background: none; border: none; color: #334155; cursor: pointer; font-size: 18px; padding: 0; line-height: 1; flex-shrink: 0; }
+    #feed-search-icon { color: #94a3b8; font-size: 15px; flex-shrink: 0; line-height: 1; }
+    #feed-search-input { background: none; border: none; outline: none; color: #0f172a; font-size: 12.5px; flex: 1; font-family: inherit; }
+    #feed-search-input::placeholder { color: #94a3b8; }
+    #feed-search-clear { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 18px; padding: 0; line-height: 1; flex-shrink: 0; }
     #feed-search-clear:hover { color: #64748b; }
     #feed-pills-wrap.has-search .feed-pill { opacity: 0.35; pointer-events: none; }
-
-    /* ── Pills ── */
     #feed-pills { display: flex; flex-wrap: wrap; gap: 8px; }
     .feed-pill {
       padding: 4px 14px; border-radius: 99px;
       font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-      cursor: pointer; border: 1px solid rgba(255,255,255,0.09);
-      background: rgba(255,255,255,0.04); color: #475569;
+      cursor: pointer; border: 1px solid #e2e8f0;
+      background: #f8fafc; color: #94a3b8;
       transition: background 0.15s, color 0.15s, border-color 0.15s; user-select: none;
     }
-    .feed-pill:hover { background: rgba(255,255,255,0.08); color: #94a3b8; }
-
-    /* ── Scrollable grid area ── */
+    .feed-pill:hover { background: #f1f5f9; color: #64748b; }
     #feed-scroll { flex: 1; overflow-y: auto; padding: 20px 24px 28px; }
     #feed-scroll::-webkit-scrollbar { width: 4px; }
     #feed-scroll::-webkit-scrollbar-track { background: transparent; }
-    #feed-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
-
-    /* ── Article card grid ── */
+    #feed-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 2px; }
     #feed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
-
-    /* ── Feed article card ── */
     .feed-card {
-      background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 12px; padding: 16px 18px;
+      background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 18px;
       display: flex; flex-direction: column; gap: 8px;
-      transition: background 0.15s, border-color 0.15s;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
-    .feed-card:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.10); }
+    .feed-card:hover { background: #f8fafc; border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
     .feed-card-meta { display: flex; align-items: center; gap: 8px; }
     .feed-card-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .feed-card-source { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #475569; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .feed-card-age { font-size: 10px; color: #334155; flex-shrink: 0; }
-    .feed-card-title { font-size: 13.5px; font-weight: 600; color: #cbd5e1; line-height: 1.45; text-decoration: none; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    .feed-card-title:hover { color: #f1f5f9; }
+    .feed-card-source { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #94a3b8; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .feed-card-age { font-size: 10px; color: #cbd5e1; flex-shrink: 0; }
+    .feed-card-title { font-size: 13.5px; font-weight: 600; color: #334155; line-height: 1.45; text-decoration: none; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .feed-card-title:hover { color: #0f172a; }
     .feed-card-badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; align-self: flex-start; }
-
-    /* ── Feed card expand ── */
-    .feed-card-toggle-btn {
-      background: none; border: none; color: #334155; font-size: 10.5px;
-      cursor: pointer; padding: 0; align-self: flex-start; font-family: inherit;
-      transition: color 0.15s, transform 0.2s; line-height: 1;
-    }
+    .feed-card-toggle-btn { background: none; border: none; color: #94a3b8; font-size: 10.5px; cursor: pointer; padding: 0; align-self: flex-start; font-family: inherit; transition: color 0.15s, transform 0.2s; line-height: 1; }
     .feed-card-toggle-btn:hover { color: #64748b; }
     .feed-card.expanded .feed-card-toggle-btn { transform: rotate(180deg); color: #64748b; }
     .feed-card-expand { overflow: hidden; max-height: 0; transition: max-height 0.32s cubic-bezier(0.4,0,0.2,1); }
     .feed-card.expanded .feed-card-expand { max-height: 500px; }
-    .expand-summary { font-size: 12px; color: #94a3b8; line-height: 1.6; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 2px; }
-    .expand-entities-label { font-size: 9px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: #334155; margin-top: 10px; margin-bottom: 6px; }
+    .expand-summary { font-size: 12px; color: #64748b; line-height: 1.6; padding-top: 10px; border-top: 1px solid #f1f5f9; margin-top: 2px; }
+    .expand-entities-label { font-size: 9px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: #94a3b8; margin-top: 10px; margin-bottom: 6px; }
     .expand-entity-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
     .expand-entity-tag { padding: 2px 9px; border-radius: 99px; font-size: 10px; font-weight: 600; border: 1px solid transparent; cursor: pointer; transition: filter 0.15s; }
-    .expand-entity-tag:hover { filter: brightness(1.3); }
-    .expand-loading { font-size: 11px; color: #334155; padding: 8px 0; }
-
-    /* ── Load more ── */
+    .expand-entity-tag:hover { filter: brightness(0.9); }
+    .expand-loading { font-size: 11px; color: #94a3b8; padding: 8px 0; }
     #feed-load-more-wrap { display: flex; justify-content: center; padding: 24px 0 8px; }
-    #feed-load-more { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; color: #64748b; font-size: 12px; font-weight: 600; padding: 8px 28px; cursor: pointer; font-family: inherit; transition: background 0.15s, color 0.15s; }
-    #feed-load-more:hover { background: rgba(255,255,255,0.08); color: #94a3b8; }
+    #feed-load-more { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #64748b; font-size: 12px; font-weight: 600; padding: 8px 28px; cursor: pointer; font-family: inherit; transition: background 0.15s, color 0.15s; }
+    #feed-load-more:hover { background: #f8fafc; color: #475569; }
     #feed-load-more:disabled { opacity: 0.35; cursor: not-allowed; }
-
-    /* ── Feed state messages ── */
-    #feed-empty, #feed-spinner { text-align: center; padding: 48px 0; font-size: 13px; color: #334155; }
+    #feed-empty, #feed-spinner { text-align: center; padding: 48px 0; font-size: 13px; color: #94a3b8; }
 
     /* ── Simulation view ─────────────────────────────────────── */
     #sim-view {
       position: fixed; top: 0; left: 0; right: 0; bottom: 40px; z-index: 5;
-      background: #060a14; display: flex;
+      background: #f1f5f9; display: flex;
       opacity: 0; visibility: hidden; pointer-events: none;
-      transition: opacity 0.22s ease, left 0.28s cubic-bezier(0.4,0,0.2,1);
+      transition: opacity 0.22s ease;
     }
-    body.view-sim #sim-view { opacity: 1; visibility: visible; pointer-events: auto; left: 0 !important; bottom: 0; flex-direction: column; }
+    body.view-sim #sim-view { opacity: 1; visibility: visible; pointer-events: auto; left: 0 !important; bottom: 40px; flex-direction: column; }
     body.view-sim #header   { display: none; }
     body.view-sim #canvas   { display: none; }
     body.view-sim #legend   { display: none; }
@@ -391,145 +339,147 @@
     body.view-sim #graph-search-wrap { display: none; }
     body.view-sim #signals-sidebar   { transform: translateX(-260px) !important; }
     body.view-sim #signals-sidebar-toggle { display: none; }
-    body.sidebar-open #sim-view { left: 260px; }
 
-    /* View toggle button group */
-    #view-toggle-wrap { pointer-events: auto; flex-shrink: 0; display: flex; gap: 4px; }
-    .vtb {
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 8px; color: #94a3b8; font-size: 12px; font-weight: 700;
-      letter-spacing: 0.05em; padding: 6px 14px; cursor: pointer; font-family: inherit;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    /* ── Sim top bar ── */
+    #sim-top-bar {
+      flex-shrink: 0; display: flex; align-items: center; gap: 18px;
+      padding: 0 22px; height: 56px;
+      background: #ffffff; border-bottom: 1px solid #e2e8f0;
     }
-    .vtb:hover { background: rgba(255,255,255,0.08); color: #f1f5f9; border-color: rgba(255,255,255,0.18); }
-    .vtb.active { background: rgba(129,140,248,0.12); border-color: rgba(129,140,248,0.35); color: #818cf8; }
-
-    /* Sim info bar */
-    #sim-info-bar {
-      flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.06);
-      background: rgba(6,10,20,0.8);
+    #sim-brand { display: flex; flex-direction: column; flex-shrink: 0; }
+    #sim-brand-name { font-size: 15px; font-weight: 800; letter-spacing: -0.03em; color: #0f172a; }
+    #sim-brand-tagline { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+    #sim-live-badge {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 11px; border-radius: 99px;
+      background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d;
+      font-size: 10px; font-weight: 800; letter-spacing: 0.10em; flex-shrink: 0;
     }
-    #sim-info-collapsed {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 9px 18px;
+    .live-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: #22c55e; flex-shrink: 0;
     }
-    #sim-info-title { font-size: 12px; font-weight: 700; color: #475569; letter-spacing: 0.04em; }
-    #sim-info-toggle {
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 50%; width: 22px; height: 22px; color: #475569; font-size: 11px;
-      font-weight: 700; cursor: pointer; font-family: inherit; line-height: 1;
-      flex-shrink: 0;
+    @keyframes live-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
     }
-    #sim-info-toggle:hover { color: #94a3b8; border-color: rgba(255,255,255,0.2); }
-    #sim-info-toggle.open { color: #818cf8; border-color: rgba(129,140,248,0.4); }
-    #sim-info-expanded { display: none; padding: 0 18px 14px; }
-    #sim-info-expanded.open { display: block; }
-    #sim-info-body p { font-size: 12px; color: #475569; margin: 0 0 10px; line-height: 1.6; }
-    #sim-info-body b { color: #64748b; }
-    #sim-info-cols {
-      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 10px;
+    .live-dot { animation: live-pulse 1.8s ease-in-out infinite; }
+    #sim-top-spacer { flex: 1; }
+    #sim-top-cycle-nav { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .sim-nav-btn {
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+      color: #64748b; font-size: 16px; cursor: pointer; padding: 2px 10px; line-height: 1.5;
+      font-family: inherit; transition: color 0.13s, border-color 0.13s, background 0.13s;
     }
-    #sim-info-cols > div {
-      font-size: 11px; color: #334155; line-height: 1.55;
-      padding: 10px 12px; background: rgba(255,255,255,0.02);
-      border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;
-    }
-    #sim-info-cols b { color: #475569; display: block; margin-bottom: 4px; }
-    #sim-info-score { margin: 0 !important; }
+    .sim-nav-btn:hover:not(:disabled) { color: #0f172a; border-color: #cbd5e1; background: #f1f5f9; }
+    .sim-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    #sim-cycle-lbl { font-size: 12px; color: #475569; font-weight: 600; min-width: 130px; text-align: center; }
 
     /* Sim columns wrapper */
     #sim-cols { flex: 1; display: flex; overflow: hidden; }
 
     /* Sim layout columns */
     #sim-col-left {
-      width: 265px; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.05);
+      width: 274px; flex-shrink: 0;
+      border-right: 1px solid #e2e8f0;
       display: flex; flex-direction: column; overflow: hidden;
+      background: #ffffff;
     }
-    #sim-col-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    #sim-col-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; background: #f8fafc; }
     #sim-col-right {
-      width: 295px; flex-shrink: 0; border-left: 1px solid rgba(255,255,255,0.05);
-      display: flex; flex-direction: column; overflow: hidden;
-      background: rgba(6,10,20,0.5);
+      width: 315px; flex-shrink: 0; border-left: 1px solid #e2e8f0;
+      display: flex; flex-direction: column; overflow: hidden; background: #ffffff;
     }
     .sim-pane-hdr {
-      padding: 13px 16px 9px; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
+      padding: 14px 16px 10px; border-bottom: 1px solid #f1f5f9; flex-shrink: 0;
     }
-    .sim-pane-title { font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #334155; }
-    .sim-pane-sub { font-size: 11px; color: #1e293b; margin-top: 3px; }
+    .sim-pane-title { font-size: 10px; font-weight: 800; letter-spacing: 0.10em; text-transform: uppercase; color: #94a3b8; }
+    .sim-pane-sub { font-size: 11px; color: #cbd5e1; margin-top: 3px; }
     .sim-scroll { flex: 1; overflow-y: auto; }
     .sim-scroll::-webkit-scrollbar { width: 3px; }
-    .sim-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
-
-    /* Cycle nav */
-    #sim-cycle-nav {
-      display: flex; align-items: center; gap: 8px; padding: 7px 16px;
-      border-bottom: 1px solid rgba(255,255,255,0.04); flex-shrink: 0;
-    }
-    .sim-nav-btn {
-      background: none; border: 1px solid rgba(255,255,255,0.08); border-radius: 5px;
-      color: #334155; font-size: 14px; cursor: pointer; padding: 1px 8px; line-height: 1.4;
-      font-family: inherit; transition: color 0.13s, border-color 0.13s;
-    }
-    .sim-nav-btn:hover:not(:disabled) { color: #94a3b8; border-color: rgba(255,255,255,0.18); }
-    .sim-nav-btn:disabled { opacity: 0.2; cursor: not-allowed; }
-    #sim-cycle-lbl { font-size: 11px; color: #475569; font-weight: 600; flex: 1; text-align: center; }
+    .sim-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 2px; }
 
     /* Leaderboard rows */
     .lb-row {
-      display: flex; align-items: flex-start; gap: 10px; padding: 9px 16px;
-      border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer;
+      display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+      border-bottom: 1px solid #f8fafc; cursor: pointer;
       transition: background 0.12s;
     }
-    .lb-row:hover { background: rgba(255,255,255,0.04); }
-    .lb-row.active { background: rgba(129,140,248,0.09); border-right: 2px solid #818cf8; }
-    .lb-rank { font-size: 11px; font-weight: 800; width: 16px; flex-shrink: 0; padding-top: 1px; color: #334155; text-align: right; }
-    .lb-rank.r1 { color: #facc15; } .lb-rank.r2 { color: #94a3b8; } .lb-rank.r3 { color: #fb923c; }
-    .lb-info { flex: 1; min-width: 0; }
-    .lb-name { font-size: 12.5px; font-weight: 700; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lb-meta { font-size: 9.5px; color: #334155; margin-top: 2px; }
-    .lb-bar-bg { height: 2px; background: rgba(255,255,255,0.06); border-radius: 1px; margin: 5px 0 4px; overflow: hidden; }
-    .lb-bar-fill { height: 100%; border-radius: 1px; background: linear-gradient(90deg,#6366f1,#818cf8); }
-    .lb-engmt { display: flex; gap: 6px; font-size: 9.5px; color: #334155; }
-    .lb-engmt b { color: #475569; }
-    .lb-score-num { font-size: 14px; font-weight: 800; color: #818cf8; flex-shrink: 0; padding-top: 1px; }
-
-    /* Tweet cards */
-    .sim-tweet {
-      margin: 8px 12px; padding: 11px 13px;
-      background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 10px;
+    .lb-row:hover { background: #f8fafc; }
+    .lb-row.active { background: #eef2ff; border-right: 3px solid #6366f1; }
+    .lb-rank { font-size: 17px; font-weight: 900; width: 20px; flex-shrink: 0; color: #e2e8f0; text-align: right; }
+    .lb-rank.r1 { color: #d97706; }
+    .lb-rank.r2 { color: #94a3b8; }
+    .lb-rank.r3 { color: #c27c3c; }
+    .lb-avatar {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800; color: #ffffff;
     }
-    .tweet-hdr { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
-    .tweet-author { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #475569; flex: 1; }
-    .tweet-ver { font-size: 9.5px; color: #1e293b; }
-    .tweet-body { font-size: 12.5px; color: #cbd5e1; line-height: 1.55; margin-bottom: 9px; }
-    .tweet-footer { display: flex; align-items: center; gap: 10px; }
-    .tweet-react { font-size: 10px; color: #334155; }
-    .tweet-react b { color: #475569; font-weight: 600; }
-    .tweet-escore { font-size: 10.5px; font-weight: 700; margin-left: auto; }
+    .lb-info { flex: 1; min-width: 0; }
+    .lb-name { font-size: 13px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lb-meta { font-size: 9.5px; color: #94a3b8; margin-top: 1px; }
+    .lb-bar-bg { height: 5px; background: #f1f5f9; border-radius: 3px; margin: 7px 0 5px; overflow: hidden; }
+    .lb-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #6366f1, #818cf8); }
+    .lb-engmt { display: flex; gap: 8px; font-size: 10px; color: #94a3b8; }
+    .lb-engmt b { color: #64748b; }
+    .lb-score-num { font-size: 16px; font-weight: 800; color: #6366f1; flex-shrink: 0; }
 
-    /* Mutation log */
-    .mut-row { padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-    .mut-name { font-size: 12px; font-weight: 700; color: #f87171; margin-bottom: 3px; }
-    .mut-info { font-size: 10.5px; color: #334155; line-height: 1.5; }
+    /* Tweet cards (Twitter-style) */
+    .sim-tweet {
+      margin: 10px 14px;
+      background: #ffffff; border: 1px solid #e2e8f0;
+      border-radius: 16px; padding: 14px 16px;
+      transition: box-shadow 0.15s;
+    }
+    .sim-tweet:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+    .tweet-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .tweet-avatar {
+      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; color: #ffffff;
+    }
+    .tweet-author-block { flex: 1; min-width: 0; }
+    .tweet-author-name { font-size: 14px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tweet-ver { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+    .tweet-body { font-size: 14px; color: #0f172a; line-height: 1.6; margin-bottom: 12px; font-weight: 400; }
+    .tweet-footer { display: flex; align-items: center; gap: 14px; padding-top: 10px; border-top: 1px solid #f1f5f9; }
+    .tweet-react { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
+    .tweet-react b { color: #64748b; font-weight: 600; }
+    .tweet-escore {
+      margin-left: auto; font-size: 11px; font-weight: 700;
+      padding: 2px 9px; border-radius: 99px;
+    }
 
-    /* Prompt evolution */
-    .evo-ver { padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-    .evo-hdr { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
-    .evo-tag { font-size: 9.5px; font-weight: 800; color: #334155; }
-    .evo-tag.current { color: #818cf8; }
-    .evo-cycle { font-size: 9.5px; color: #1e293b; flex: 1; }
-    .evo-score { font-size: 10px; color: #475569; font-weight: 600; }
-    .evo-prompt { font-size: 11px; color: #64748b; line-height: 1.55; }
+    /* Prompt Evolution timeline */
+    .evo-ver {
+      padding: 13px 16px; border-bottom: 1px solid #f8fafc;
+    }
+    .evo-ver.new-this-cycle {
+      background: #fffbeb; border-left: 3px solid #f59e0b;
+    }
+    .evo-hdr { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+    .evo-tag {
+      font-size: 9.5px; font-weight: 800; color: #94a3b8;
+      background: #f1f5f9; padding: 1px 8px; border-radius: 99px;
+    }
+    .evo-tag.current { color: #6366f1; background: #eef2ff; border: 1px solid #c7d2fe; }
+    .evo-mutated-badge {
+      font-size: 9px; font-weight: 700; color: #d97706;
+      background: #fffbeb; border: 1px solid #fde68a; padding: 1px 7px; border-radius: 99px;
+    }
+    .evo-cycle { font-size: 9.5px; color: #94a3b8; flex: 1; }
+    .evo-score { font-size: 10px; color: #64748b; font-weight: 600; flex-shrink: 0; }
+    .evo-trigger { font-size: 10px; color: #d97706; margin-bottom: 5px; }
+    .evo-prompt { font-size: 12px; color: #475569; line-height: 1.65; font-style: italic; }
 
-    .sim-msg { padding: 36px 20px; text-align: center; font-size: 12px; color: #334155; line-height: 1.7; }
+    .sim-msg { padding: 40px 20px; text-align: center; font-size: 13px; color: #94a3b8; line-height: 1.7; }
   </style>
 </head>
 <body class="view-sim">
 
 <svg id="canvas"></svg>
 
-<!-- Feed view -->
+<!-- Feed view (preserved, hidden) -->
 <div id="feed-view">
   <div id="feed-pills-wrap">
     <div id="feed-source-badge" style="display:none">
@@ -557,7 +507,7 @@
 
 <div id="tip"></div>
 
-<!-- Signals sidebar -->
+<!-- Signals sidebar (preserved, hidden in sim) -->
 <div id="signals-sidebar">
   <div id="signals-sidebar-inner">
     <div id="signals-sidebar-hdr">
@@ -570,6 +520,7 @@
   <button id="signals-sidebar-toggle" onclick="toggleSignalsSidebar()">‹</button>
 </div>
 
+<!-- Header (preserved, hidden in sim) -->
 <div id="header">
   <div id="header-title">
     <h1>Signal Atlas</h1>
@@ -582,8 +533,8 @@
   </div>
   <div id="view-toggle-wrap">
     <button class="vtb" id="vtb-graph" onclick="switchView('graph')" style="display:none">◎ Graph</button>
-    <button class="vtb" id="vtb-feed"  onclick="switchView('feed')" style="display:none">⊞ Feed</button>
-    <button class="vtb active" id="vtb-sim"   onclick="switchView('sim')">▷ Sim</button>
+    <button class="vtb" id="vtb-feed"  onclick="switchView('feed')"  style="display:none">⊞ Feed</button>
+    <button class="vtb active" id="vtb-sim" onclick="switchView('sim')">▷ Sim</button>
   </div>
   <div id="stats-panel"></div>
 </div>
@@ -609,7 +560,7 @@
 
 <div id="hint">scroll to zoom · drag to pan · click to explore</div>
 
-<!-- Article panel -->
+<!-- Article panel (preserved, hidden in sim) -->
 <div id="panel">
   <div id="panel-head">
     <div>
@@ -627,71 +578,65 @@
 <!-- Simulation view -->
 <div id="sim-view">
 
-  <!-- Info bar -->
-  <div id="sim-info-bar">
-    <div id="sim-info-collapsed">
-      <span id="sim-info-title">Signal Atlas · Writer Simulation</span>
-      <button id="sim-info-toggle" onclick="toggleSimInfo()">?</button>
+  <!-- Top bar -->
+  <div id="sim-top-bar">
+    <div id="sim-brand">
+      <span id="sim-brand-name">Signal Atlas</span>
+      <span id="sim-brand-tagline">5 AI writers · 100 reader personas · prompts evolve daily based on engagement</span>
     </div>
-    <div id="sim-info-expanded">
-      <div id="sim-info-body">
-        <p><b>What is this?</b> Five AI writer personas compete each cycle to craft the most engaging tweet about today's top news signals. After every cycle, 10 reader personas sample each tweet and react — repost, comment, like, or skip. The bottom two writers by engagement score have their style prompts rewritten by an LLM (a <b>mutation</b>). Over time, the fittest prompt styles survive.</p>
-        <div id="sim-info-cols">
-          <div><b>Leaderboard</b><br>Writers ranked by engagement score for the displayed cycle. Click a writer to drill into their tweets and prompt history. Use ‹ › to navigate past cycles.</div>
-          <div><b>Tweets</b><br>Every tweet the selected writer generated this cycle, with per-tweet breakdown of reposts, comments, likes, and skips from sampled readers.</div>
-          <div><b>Mutations · Evolution</b><br>Which writers had their prompts rewritten this cycle, and the selected writer's full prompt version lineage across all cycles.</div>
-        </div>
-        <p id="sim-info-score"><b>Engagement score</b> = (reposts×3 + comments×2 + likes×1) ÷ (readers×3). Range 0–1, higher is better.</p>
-      </div>
+    <div id="sim-live-badge">
+      <span class="live-dot"></span>
+      LIVE
+    </div>
+    <div id="sim-top-spacer"></div>
+    <div id="sim-top-cycle-nav">
+      <button class="sim-nav-btn" id="sim-prev-btn" onclick="simNavCycle(-1)" disabled>‹</button>
+      <span id="sim-cycle-lbl">—</span>
+      <button class="sim-nav-btn" id="sim-next-btn" onclick="simNavCycle(1)" disabled>›</button>
     </div>
   </div>
 
   <!-- Three columns -->
   <div id="sim-cols">
-  <!-- Left: Leaderboard -->
-  <div id="sim-col-left">
-    <div class="sim-pane-hdr">
-      <div class="sim-pane-title">Leaderboard</div>
-      <div class="sim-pane-sub" id="sim-lb-sub">&nbsp;</div>
-    </div>
-    <div id="sim-cycle-nav">
-      <button class="sim-nav-btn" id="sim-prev-btn" onclick="simNavCycle(-1)" disabled>‹</button>
-      <span id="sim-cycle-lbl">—</span>
-      <button class="sim-nav-btn" id="sim-next-btn" onclick="simNavCycle(1)" disabled>›</button>
-    </div>
-    <div class="sim-scroll" id="sim-leaderboard">
-      <div class="sim-msg" id="sim-lb-loading">Loading…</div>
-    </div>
-  </div>
 
-  <!-- Center: Tweets -->
-  <div id="sim-col-main">
-    <div class="sim-pane-hdr">
-      <div class="sim-pane-title" id="sim-tweets-title">Tweets</div>
-      <div class="sim-pane-sub" id="sim-tweets-sub">&nbsp;</div>
+    <!-- Left: Leaderboard -->
+    <div id="sim-col-left">
+      <div class="sim-pane-hdr">
+        <div class="sim-pane-title">Leaderboard</div>
+        <div class="sim-pane-sub" id="sim-lb-sub">&nbsp;</div>
+      </div>
+      <div class="sim-scroll" id="sim-leaderboard">
+        <div class="sim-msg" id="sim-lb-loading">Loading…</div>
+      </div>
     </div>
-    <div class="sim-scroll" id="sim-tweets"></div>
-  </div>
 
-  <!-- Right: Mutations + Prompt evolution -->
-  <div id="sim-col-right">
-    <div class="sim-pane-hdr">
-      <div class="sim-pane-title">Mutations</div>
-      <div class="sim-pane-sub" id="sim-mut-sub">&nbsp;</div>
+    <!-- Center: Tweets -->
+    <div id="sim-col-main">
+      <div class="sim-pane-hdr">
+        <div class="sim-pane-title" id="sim-tweets-title">Tweets</div>
+        <div class="sim-pane-sub" id="sim-tweets-sub">&nbsp;</div>
+      </div>
+      <div class="sim-scroll" id="sim-tweets"></div>
     </div>
-    <div style="flex:0 0 auto;max-height:40%;overflow-y:auto" id="sim-mutations"></div>
-    <div class="sim-pane-hdr" style="border-top:1px solid rgba(255,255,255,0.05)">
-      <div class="sim-pane-title">Prompt Evolution <span style="font-weight:400;opacity:0.45;font-size:10px">(all cycles)</span></div>
-      <div class="sim-pane-sub" id="sim-evo-sub">Select a writer</div>
+
+    <!-- Right: Prompt Evolution -->
+    <div id="sim-col-right">
+      <div class="sim-pane-hdr">
+        <div class="sim-pane-title">Prompt Evolution</div>
+        <div class="sim-pane-sub" id="sim-evo-sub">Select a writer</div>
+      </div>
+      <div class="sim-scroll" id="sim-evolution"></div>
+      <!-- Preserved hidden elements for internal rendering -->
+      <div id="sim-mutations" style="display:none"></div>
+      <div id="sim-mut-sub" style="display:none"></div>
     </div>
-    <div class="sim-scroll" id="sim-evolution"></div>
-  </div>
+
   </div><!-- /sim-cols -->
 </div>
 
 <!-- Ticker -->
 <div id="ticker">
-  <div id="ticker-label">LATEST</div>
+  <div id="ticker-label">LIVE</div>
   <div id="ticker-track">
     <div id="ticker-inner"></div>
   </div>
@@ -713,6 +658,14 @@ const ENTITY_COLORS = {
 };
 const tColor = n => TOPIC_COLORS[n] || '#94a3b8';
 const eColor = t => ENTITY_COLORS[t] || '#94a3b8';
+
+// ── Writer avatar colour (deterministic per name) ──────────
+const WRITER_PALETTE = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ef4444','#14b8a6'];
+function writerColor(name) {
+  let h = 0;
+  for (let i = 0; i < (name || '').length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return WRITER_PALETTE[Math.abs(h) % WRITER_PALETTE.length];
+}
 
 // ── Recency ────────────────────────────────────────────────
 function ageHours(isoStr) {
@@ -761,23 +714,21 @@ let expandedCardId  = null;
 let feedEntrySource  = null;
 let graphTopicFilter = null;
 // Sidebar
-let signalsSidebarOpen = true;
+let signalsSidebarOpen = false;
 let signalsData        = [];
 // Simulation
-let simInitialized   = false;
-let simCycleNumber   = null;
-let simCycleMax      = null;
-let simSelectedWriter = null;
-let simLeaderboard   = [];
-let simTweets        = [];
+let simInitialized      = false;
+let simCycleNumber      = null;
+let simCycleMax         = null;
+let simSelectedWriter   = null;
+let simLeaderboard      = [];
+let simTweets           = [];
+let simCurrentMutations = [];
 // Graph refs (set after graph loads)
 let graphNodes     = null;
 let graphLinks     = null;
 let graphNeighbors = null;
 let graphConnLinks = null;
-
-// Apply initial sidebar state
-document.body.classList.add('sidebar-open');
 
 // ── SVG setup ─────────────────────────────────────────────
 const svg = d3.select('#canvas');
@@ -789,8 +740,8 @@ const defs = svg.append('defs');
 defs.append('radialGradient').attr('id', 'bg-vig')
   .attr('cx','50%').attr('cy','50%').attr('r','70%')
   .call(g => {
-    g.append('stop').attr('offset','0%').attr('stop-color','#0d1424').attr('stop-opacity', 0);
-    g.append('stop').attr('offset','100%').attr('stop-color','#020408').attr('stop-opacity', 0.8);
+    g.append('stop').attr('offset','0%').attr('stop-color','#f8fafc').attr('stop-opacity', 0);
+    g.append('stop').attr('offset','100%').attr('stop-color','#e2e8f0').attr('stop-opacity', 0.8);
   });
 svg.append('rect').attr('width',W).attr('height',H)
   .attr('fill','url(#bg-vig)').style('pointer-events','none');
@@ -846,10 +797,8 @@ function openPanel(d) {
             <a class="card-title" href="${a.url}" target="_blank" rel="noopener">${a.title}</a>
           </div>`;
       }).join('');
-      // View in Feed button
-      const feedLabel = isT ? d.label : null;
       const footerEl = document.createElement('div');
-      footerEl.style.cssText = 'padding:12px 20px;border-top:1px solid rgba(255,255,255,0.05)';
+      footerEl.style.cssText = 'padding:12px 20px;border-top:1px solid #f1f5f9';
       const feedBtn = document.createElement('button');
       feedBtn.className = 'panel-feed-btn';
       feedBtn.textContent = '⊞ View in Feed';
@@ -1017,7 +966,6 @@ fetch('/graph')
       connLinks.get(tid)?.push(i);
     });
 
-    // Store refs at module scope
     graphNeighbors = neighbors;
     graphConnLinks = connLinks;
 
@@ -1046,7 +994,6 @@ fetch('/graph')
         .on('end',   (e,d) => { if (!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; })
       );
 
-    // Store D3 selections at module scope
     graphNodes = nodeSel;
     graphLinks = linkSel;
 
@@ -1062,7 +1009,7 @@ fetch('/graph')
     nodeSel.append('circle')
       .attr('r', nodeR)
       .attr('fill', d => d.group === 'topic' ? `url(#grad-${d.id})` : eColor(d.group))
-      .attr('stroke', d => d.group === 'topic' ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.05)')
+      .attr('stroke', d => d.group === 'topic' ? 'rgba(0,0,0,0.12)' : 'rgba(0,0,0,0.06)')
       .attr('stroke-width', d => d.group === 'topic' ? 1.5 : 0.5);
 
     nodeSel.filter(d => d.group === 'topic')
@@ -1083,7 +1030,7 @@ fetch('/graph')
       .attr('cx', d => nodeR(d) * 0.65)
       .attr('cy', d => -nodeR(d) * 0.65)
       .attr('fill', d => recencyColor(d.latest_at))
-      .attr('stroke', '#060a14')
+      .attr('stroke', '#f8fafc')
       .attr('stroke-width', 1);
 
     nodeSel.filter(d => d.group === 'topic' || d.article_count >= 2)
@@ -1109,7 +1056,7 @@ fetch('/graph')
           <div class="tip-name">${d.label}</div>
           <div class="tip-row"><b>${d.article_count}</b> article${d.article_count !== 1 ? 's' : ''}</div>
           ${age ? `<div class="tip-row"><span class="tip-heat" style="background:${rc}"></span>Latest ${age}</div>` : ''}
-          <div class="tip-row" style="margin-top:5px;color:#334155;font-size:11px">Click to see headlines →</div>
+          <div class="tip-row" style="margin-top:5px;color:#94a3b8;font-size:11px">Click to see headlines →</div>
         `;
         tip.classList.add('show');
       })
@@ -1388,7 +1335,7 @@ function loadCardDetail(cardEl, articleId) {
   const expandEl = cardEl.querySelector('.feed-card-expand');
   const stored   = cardEl.dataset.summary;
   expandEl.innerHTML = stored
-    ? `<div class="expand-summary">${stored.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div><div class="expand-loading" style="font-size:10px;padding-top:6px;color:#1e293b">Loading entities…</div>`
+    ? `<div class="expand-summary">${stored.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div><div class="expand-loading" style="font-size:10px;padding-top:6px;color:#94a3b8">Loading entities…</div>`
     : '<div class="expand-loading">Loading…</div>';
 
   fetch(`/articles/${articleId}`)
@@ -1468,7 +1415,6 @@ function highlightGraphTopic(topicName) {
 
 function initSimView() {
   simInitialized = true;
-  // Fetch latest cycle first, then determine the max cycle number
   fetch('/simulation/latest')
     .then(r => r.ok ? r.json() : Promise.reject(r.status))
     .then(data => {
@@ -1502,15 +1448,14 @@ function simNavCycle(delta) {
 
 function renderSimCycle(data) {
   const cycle = data.cycle;
-  simCycleNumber = cycle.cycle_number;
-  simLeaderboard = data.leaderboard || [];
-  simTweets      = data.tweets || [];
+  simCycleNumber      = cycle.cycle_number;
+  simLeaderboard      = data.leaderboard || [];
+  simTweets           = data.tweets || [];
+  simCurrentMutations = data.mutations || [];
 
-  // Hide loading placeholder
   const loadEl = document.getElementById('sim-lb-loading');
   if (loadEl) loadEl.style.display = 'none';
 
-  // Cycle nav label + buttons
   const dt = cycle.completed_at ? new Date(cycle.completed_at) : null;
   const dateStr = dt ? dt.toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '';
   document.getElementById('sim-cycle-lbl').textContent =
@@ -1519,17 +1464,15 @@ function renderSimCycle(data) {
   document.getElementById('sim-next-btn').disabled =
     simCycleMax !== null && simCycleNumber >= simCycleMax;
 
-  // Sub-header info
   const mlLink = cycle.mlflow_run_id
-    ? ` · <span style="color:#475569;font-size:9px">${cycle.mlflow_run_id.slice(0,8)}…</span>`
+    ? ` · <span style="color:#94a3b8;font-size:9px">${cycle.mlflow_run_id.slice(0,8)}…</span>`
     : '';
   document.getElementById('sim-lb-sub').innerHTML =
     `${cycle.story_count} stories · ${simLeaderboard.length} writers${mlLink}`;
 
   _renderLeaderboard(simLeaderboard);
-  _renderMutations(data.mutations || [], simCycleNumber);
+  _renderMutations(simCurrentMutations, simCycleNumber);
 
-  // Default: select top writer
   simSelectedWriter = simLeaderboard[0]?.writer_name || null;
   _renderTweets(simSelectedWriter);
   _renderEvolution(simSelectedWriter);
@@ -1544,10 +1487,13 @@ function _renderLeaderboard(lb) {
   }
   const rankCls = r => r === 1 ? 'r1' : r === 2 ? 'r2' : r === 3 ? 'r3' : '';
   el.innerHTML = lb.map(w => {
-    const pct = Math.round(w.engagement_score * 100);
+    const pct  = Math.round(w.engagement_score * 100);
     const name = (w.writer_name || '').replace(/</g,'&lt;');
+    const col  = writerColor(w.writer_name || '');
+    const init = (w.writer_name || '?')[0].toUpperCase();
     return `<div class="lb-row" data-writer="${name}">
       <div class="lb-rank ${rankCls(w.rank)}">${w.rank}</div>
+      <div class="lb-avatar" style="background:${col}">${init}</div>
       <div class="lb-info">
         <div class="lb-name">${name}</div>
         <div class="lb-meta">v${w.prompt_version ?? '?'} · ${w.tweet_count} tweets · ${w.readers_sampled} readers</div>
@@ -1598,13 +1544,19 @@ function _renderTweets(writerName) {
 
   const sorted = [...tweets].sort((a, b) => b.engagement_score - a.engagement_score);
   el.innerHTML = sorted.map(t => {
-    const sc = t.engagement_score;
-    const scoreColor = sc >= 0.5 ? '#4ade80' : sc >= 0.3 ? '#facc15' : '#64748b';
-    const content = (t.content || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const sc        = t.engagement_score;
+    const scoreColor = sc >= 0.5 ? '#15803d' : sc >= 0.3 ? '#d97706' : '#94a3b8';
+    const scoreBg    = sc >= 0.5 ? '#f0fdf4' : sc >= 0.3 ? '#fffbeb' : '#f8fafc';
+    const content    = (t.content || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const col        = writerColor(t.writer_name || '');
+    const init       = (t.writer_name || '?')[0].toUpperCase();
     return `<div class="sim-tweet">
       <div class="tweet-hdr">
-        <span class="tweet-author">${(t.writer_name||'').replace(/</g,'&lt;')}</span>
-        <span class="tweet-ver">v${t.prompt_version ?? '?'}</span>
+        <div class="tweet-avatar" style="background:${col}">${init}</div>
+        <div class="tweet-author-block">
+          <div class="tweet-author-name">${(t.writer_name||'').replace(/</g,'&lt;')}</div>
+          <div class="tweet-ver">prompt v${t.prompt_version ?? '?'}</div>
+        </div>
       </div>
       <div class="tweet-body">${content}</div>
       <div class="tweet-footer">
@@ -1612,7 +1564,7 @@ function _renderTweets(writerName) {
         <span class="tweet-react">&#x1F4AC; <b>${t.comment_count}</b></span>
         <span class="tweet-react">&#x2665; <b>${t.like_count}</b></span>
         <span class="tweet-react">&#x23ED; <b>${t.skip_count}</b></span>
-        <span class="tweet-escore" style="color:${scoreColor}">${sc.toFixed(3)}</span>
+        <span class="tweet-escore" style="color:${scoreColor};background:${scoreBg}">${sc.toFixed(3)}</span>
       </div>
     </div>`;
   }).join('');
@@ -1622,11 +1574,12 @@ function _renderMutations(mutations, cycleNumber) {
   const el    = document.getElementById('sim-mutations');
   const subEl = document.getElementById('sim-mut-sub');
   const cycleLabel = cycleNumber != null ? ` · cycle ${cycleNumber}` : '';
-  subEl.textContent = mutations.length
+  if (subEl) subEl.textContent = mutations.length
     ? `${mutations.length} mutation${mutations.length !== 1 ? 's' : ''}${cycleLabel}`
     : `none${cycleLabel}`;
+  if (!el) return;
   if (!mutations.length) {
-    el.innerHTML = '<div style="padding:10px 16px 2px;font-size:11px;color:#1e293b">No prompt changes this cycle — see Evolution for writer history.</div>';
+    el.innerHTML = '';
     return;
   }
   el.innerHTML = mutations.map(m => {
@@ -1651,16 +1604,19 @@ function _renderEvolution(writerName) {
       subEl.textContent = `${versions.length} version${versions.length !== 1 ? 's' : ''} · ${data.total_mutations} mutation${data.total_mutations !== 1 ? 's' : ''}`;
       const latest = versions.length ? versions[versions.length - 1].version_number : null;
       el.innerHTML = versions.slice().reverse().map(v => {
-        const isCurrent = v.version_number === latest;
-        const prompt = (v.style_prompt || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        const score  = v.avg_score_while_active != null ? v.avg_score_while_active.toFixed(3) : '—';
-        const trigger = v.triggered_by_score != null ? ` · triggered at ${v.triggered_by_score.toFixed(3)}` : '';
-        return `<div class="evo-ver">
+        const isCurrent       = v.version_number === latest;
+        const isNewThisCycle  = isCurrent && simCurrentMutations.some(m => m.writer_name === writerName);
+        const prompt          = (v.style_prompt || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const score           = v.avg_score_while_active != null ? v.avg_score_while_active.toFixed(3) : '—';
+        const trigger         = v.triggered_by_score != null ? `Mutated at score ${v.triggered_by_score.toFixed(3)}` : '';
+        return `<div class="evo-ver${isNewThisCycle ? ' new-this-cycle' : ''}">
           <div class="evo-hdr">
             <span class="evo-tag${isCurrent ? ' current' : ''}">v${v.version_number}${isCurrent ? ' · current' : ''}</span>
-            <span class="evo-cycle">cycle ${v.cycle_introduced}${trigger}</span>
+            ${isNewThisCycle ? '<span class="evo-mutated-badge">mutated this cycle</span>' : ''}
+            <span class="evo-cycle">cycle ${v.cycle_introduced}</span>
             <span class="evo-score">${score}</span>
           </div>
+          ${trigger ? `<div class="evo-trigger">${trigger}</div>` : ''}
           <div class="evo-prompt">${prompt}</div>
         </div>`;
       }).join('');
@@ -1669,11 +1625,7 @@ function _renderEvolution(writerName) {
 }
 
 function toggleSimInfo() {
-  const btn = document.getElementById('sim-info-toggle');
-  const exp = document.getElementById('sim-info-expanded');
-  const open = exp.classList.toggle('open');
-  btn.classList.toggle('open', open);
-  btn.textContent = open ? '×' : '?';
+  // Preserved for compatibility — top bar replaces the old info bar
 }
 
 initSimView();
