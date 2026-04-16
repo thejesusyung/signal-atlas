@@ -112,8 +112,9 @@ services:
       - "5000"
       - --backend-store-uri
       - ${MLFLOW_BACKEND_STORE_URI}
-      - --default-artifact-root
+      - --artifacts-destination
       - ${MLFLOW_ARTIFACT_ROOT}
+      - --serve-artifacts
     ports:
       - "5000:5000"
     volumes:

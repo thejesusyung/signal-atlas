@@ -163,8 +163,9 @@ def build_extraction_dag():
         """Detect anomalous entity/topic velocity and generate LLM briefs."""
         from news_pipeline.signals.detector import detect_and_persist_signals
 
+        from news_pipeline.llm.openrouter_client import OpenRouterProvider
         settings = get_settings()
-        provider = GroqProvider()
+        provider = OpenRouterProvider()
         with session_scope() as session:
             with tracked_run(
                 experiment_name=settings.mlflow_experiment_signals,

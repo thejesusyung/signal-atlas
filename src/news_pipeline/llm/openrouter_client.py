@@ -11,8 +11,8 @@ from news_pipeline.llm.rate_limit import RequestRateLimiter, get_shared_rate_lim
 from news_pipeline.llm.provider import LLMProvider, LLMProviderError, LLMTraceContext
 
 
-class GroqProvider(LLMProvider):
-    provider_name = "groq"
+class OpenRouterProvider(LLMProvider):
+    provider_name = "openrouter"
 
     def __init__(
         self,
@@ -20,9 +20,11 @@ class GroqProvider(LLMProvider):
         rate_limiter: RequestRateLimiter | None = None,
     ) -> None:
         settings = get_settings()
-        self.api_key = settings.groq_api_key
-        self.model = settings.groq_model
-        self.base_url = settings.groq_base_url.rstrip("/")
+        self.api_key = settings.openrouter_api_key
+        self.model = settings.openrouter_model
+        self.base_url = settings.openrouter_base_url.rstrip("/")
+        self.inference_provider = settings.openrouter_inference_provider
+        self.reasoning_effort = settings.openrouter_reasoning_effort
         self.max_retries = settings.llm_max_retries
         self.rate_limiter = rate_limiter or get_shared_rate_limiter(
             self.provider_name,
@@ -35,10 +37,12 @@ class GroqProvider(LLMProvider):
             headers={
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/signal-atlas",
+                "X-Title": "Signal Atlas",
             },
         )
 
-    @mlflow.trace(span_type="LLM", name="groq_complete")
+    @mlflow.trace(span_type="LLM", name="openrouter_complete")
     def complete(
         self,
         prompt: str,
@@ -48,8 +52,29 @@ class GroqProvider(LLMProvider):
         trace_context: LLMTraceContext | None = None,
     ) -> LLMResponse:
         if not self.api_key:
-            raise LLMProviderError("GROQ_API_KEY is not configured")
+            raise LLMProviderError("OPENROUTER_API_KEY is not configured")
         return self._complete_with_retry(prompt, system_prompt, temperature, max_tokens, trace_context)
+
+    def _build_payload(
+        self, prompt: str, system_prompt: str, temperature: float, max_tokens: int
+    ) -> dict:
+        payload: dict = {
+            "model": self.model,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ],
+        }
+        if self.reasoning_effort:
+            payload["reasoning"] = {"effort": self.reasoning_effort}
+        if self.inference_provider:
+            payload["provider"] = {
+                "order": [self.inference_provider],
+                "allow_fallbacks": False,
+            }
+        return payload
 
     def _complete_with_retry(
         self,
@@ -61,14 +86,6 @@ class GroqProvider(LLMProvider):
     ) -> LLMResponse:
         last_error: Exception | None = None
         attempts: list[dict[str, object]] = []
-        request_payload = {
-            "provider_name": self.provider_name,
-            "model": self.model,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "system_prompt": system_prompt,
-            "prompt": prompt,
-        }
 
         for attempt in range(1, self.max_retries + 1):
             self.rate_limiter.acquire()
@@ -76,19 +93,11 @@ class GroqProvider(LLMProvider):
             try:
                 response = self.client.post(
                     f"{self.base_url}/chat/completions",
-                    json={
-                        "model": self.model,
-                        "temperature": temperature,
-                        "max_tokens": max_tokens,
-                        "messages": [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": prompt},
-                        ],
-                    },
+                    json=self._build_payload(prompt, system_prompt, temperature, max_tokens),
                 )
                 if response.status_code == 429:
                     retry_after = self._parse_retry_after(response.headers.get("retry-after"))
-                    message = "Groq rate limited the request"
+                    message = "OpenRouter rate limited the request"
                     if retry_after is not None:
                         message = f"{message}; retry_after={self._format_retry_after(retry_after)}"
                         self.rate_limiter.backoff(retry_after)
@@ -108,7 +117,7 @@ class GroqProvider(LLMProvider):
                     continue
 
                 if response.status_code >= 500:
-                    last_error = LLMProviderError(f"Groq server error: {response.status_code}")
+                    last_error = LLMProviderError(f"OpenRouter server error: {response.status_code}")
                     attempts.append(
                         self._attempt_record(
                             attempt=attempt,
@@ -152,12 +161,12 @@ class GroqProvider(LLMProvider):
                 time.sleep(self._default_backoff(attempt))
                 continue
 
-            payload = response.json()
+            data = response.json()
             latency_ms = int((time.perf_counter() - started) * 1000)
             llm_response = LLMResponse(
-                text=payload["choices"][0]["message"]["content"],
-                model=payload.get("model", self.model),
-                tokens_used=payload.get("usage", {}).get("total_tokens", 0),
+                text=data["choices"][0]["message"]["content"],
+                model=data.get("model", self.model),
+                tokens_used=data.get("usage", {}).get("total_tokens", 0),
                 latency_ms=latency_ms,
                 provider_name=self.provider_name,
             )
@@ -184,7 +193,7 @@ class GroqProvider(LLMProvider):
 
         if last_error is not None:
             raise last_error
-        raise LLMProviderError("Groq request failed without a response")
+        raise LLMProviderError("OpenRouter request failed without a response")
 
     @staticmethod
     def _parse_retry_after(value: str | None) -> float | None:

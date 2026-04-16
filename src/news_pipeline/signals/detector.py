@@ -6,6 +6,8 @@ import math
 from datetime import timedelta
 from uuid import UUID
 
+import mlflow
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -325,4 +327,9 @@ def _generate_summary(provider: LLMProvider, candidate: dict, settings) -> str:
         return payload.get("summary", "")
     except Exception as exc:
         LOGGER.warning("Signal brief generation failed for %s: %s", candidate["subject_name"], exc)
+        span = mlflow.get_current_active_span()
+        if span is not None:
+            span.set_attribute("signal_brief_error", str(exc))
+            span.set_attribute("signal_brief_subject", candidate["subject_name"])
+            span.set_attribute("signal_brief_failed", True)
         return ""

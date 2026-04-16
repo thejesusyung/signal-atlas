@@ -29,6 +29,8 @@ class SimWriter(Base):
     persona_description = Column(Text, nullable=False)
     # Points to the active SimPromptVersion — no FK constraint to avoid circular ref.
     current_version_id = Column(GUID(), nullable=True)
+    # Persistent MLflow run_id — one run per writer, accumulates all cycles as steps.
+    mlflow_run_id = Column(String(50), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=sa.func.now(), nullable=False)
 
     prompt_versions = relationship(

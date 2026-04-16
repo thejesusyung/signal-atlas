@@ -6,6 +6,8 @@ import json
 import logging
 import re
 
+import mlflow
+
 from news_pipeline.llm.provider import LLMProvider, LLMTraceContext
 
 LOGGER = logging.getLogger(__name__)
@@ -24,6 +26,7 @@ Be true to the personality. Most real users skip most tweets.\
 
 
 class PersonaReader:
+    @mlflow.trace(span_type="CHAIN", name="persona_evaluation")
     def evaluate(
         self,
         *,
@@ -37,6 +40,10 @@ class PersonaReader:
         Never raises — falls back to {"action": "skip", "reason": None} on any
         LLM or parse failure so one bad call does not abort the whole tweet eval.
         """
+        span = mlflow.get_current_active_span()
+        if span is not None:
+            span.set_attribute("persona_name", persona_name)
+
         user_prompt = (
             f"About you:\n{persona_description}\n\n"
             f"Tweet:\n{tweet_content}\n\n"
@@ -50,7 +57,6 @@ class PersonaReader:
                 max_tokens=80,
                 trace_context=LLMTraceContext(
                     operation="persona_evaluation",
-                    prompt_version=persona_name,
                 ),
             )
             return _parse_response(response.text)

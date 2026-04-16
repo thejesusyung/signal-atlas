@@ -8,7 +8,7 @@ Tasks:
   generate_tweet       → fan-out LLM task: one tweet per input dict (llm_pool)
   evaluate_tweet       → fan-out LLM task: sample N personas, record reactions (llm_pool)
   score_and_mutate     → reduce: score writers, mutate bottom performers (llm_pool)
-  log_to_mlflow        → parent + nested writer runs, tweet table, prompt registry
+  log_to_mlflow        → append metrics to each writer's persistent run, register prompts
   check_weekly_reset   → tag weekly champion, log week summary on week boundary
 """
 
@@ -36,10 +36,18 @@ def build_simulation_dag():
 
     @task
     def seed_db() -> None:
-        """Seed writers and personas from YAML if not already present."""
+        """Seed writers and personas from YAML if not already present.
+
+        Also creates a persistent MLflow run for any writer that doesn't have one yet.
+        This is idempotent — writers with an existing mlflow_run_id are skipped.
+        """
+        from sqlalchemy import select
+
         from news_pipeline.config import get_settings
         from news_pipeline.db.session import session_scope
+        from news_pipeline.simulation.models import SimPromptVersion, SimWriter
         from news_pipeline.simulation.seeder import seed_all
+        from news_pipeline.simulation.tracker import ensure_writer_run
 
         settings = get_settings()
         with session_scope() as session:
@@ -48,6 +56,21 @@ def build_simulation_dag():
                 writers_path=settings.sim_writers_config_path,
                 personas_path=settings.sim_personas_config_path,
             )
+
+        # Create MLflow runs for any writer that doesn't have one yet.
+        with session_scope() as session:
+            writers = session.scalars(select(SimWriter)).all()
+            for writer in writers:
+                if writer.mlflow_run_id is not None:
+                    continue
+                version = session.get(SimPromptVersion, writer.current_version_id)
+                initial_prompt = version.style_prompt if version else ""
+                run_id = ensure_writer_run(
+                    writer_name=writer.name,
+                    persona_description=writer.persona_description,
+                    initial_prompt=initial_prompt,
+                )
+                writer.mlflow_run_id = run_id
 
     @task
     def fetch_stories() -> list[dict]:
@@ -203,10 +226,11 @@ def build_simulation_dag():
         """Generate and persist one tweet. Returns a result dict for downstream tasks."""
         import uuid
 
-        from news_pipeline.llm.groq_client import GroqProvider
+        from news_pipeline.llm.openrouter_client import OpenRouterProvider
         from news_pipeline.db.session import session_scope
         from news_pipeline.simulation.models import SimTweet
         from news_pipeline.simulation.writer import TweetWriter
+        from news_pipeline.tracking.experiment import tracked_run
 
         cycle_id = tweet_input["cycle_id"]
         writer_id = tweet_input["writer_id"]
@@ -216,14 +240,20 @@ def build_simulation_dag():
         style_prompt = tweet_input["style_prompt"]
         story = tweet_input["story"]
 
-        provider = GroqProvider()
-        content = TweetWriter().generate(
-            story=story,
-            style_prompt=style_prompt,
-            writer_name=writer_name,
-            prompt_version=prompt_version_number,
-            provider=provider,
-        )
+        provider = OpenRouterProvider()
+        with tracked_run(
+            experiment_name="simulation_cycles",
+            run_name=f"tweet_{writer_name}_cycle_{cycle_id[:8]}",
+            params={"writer_name": writer_name, "prompt_version": prompt_version_number},
+            tags={"cycle_id": cycle_id, "writer_id": writer_id, "task": "generate_tweet"},
+        ):
+            content = TweetWriter().generate(
+                story=story,
+                style_prompt=style_prompt,
+                writer_name=writer_name,
+                prompt_version=prompt_version_number,
+                provider=provider,
+            )
 
         with session_scope() as session:
             article_uuid = uuid.UUID(story["article_id"]) if story.get("article_id") else None
@@ -274,11 +304,13 @@ def build_simulation_dag():
         from news_pipeline.llm.groq_client import GroqProvider
         from news_pipeline.simulation.models import SimEngagement, SimPersona
         from news_pipeline.simulation.reader import PersonaReader
+        from news_pipeline.tracking.experiment import tracked_run
 
         settings = get_settings()
         tweet_id = tweet["tweet_id"]
         writer_name = tweet["writer_name"]
         content = tweet["content"]
+        cycle_id = tweet["cycle_id"]
 
         # ── 1. Fetch a random sample of personas (short read session) ──────────
         with session_scope() as session:
@@ -300,30 +332,36 @@ def build_simulation_dag():
         repost_count = like_count = comment_count = skip_count = 0
         engagement_rows: list[dict] = []
 
-        for persona in persona_data:
-            result = reader.evaluate(
-                tweet_content=content,
-                persona_name=persona["name"],
-                persona_description=persona["description"],
-                provider=provider,
-            )
-            action = result["action"]
-            engagement_rows.append(
-                {
-                    "persona_id": persona["id"],
-                    "persona_name": persona["name"],
-                    "action": action,
-                    "reason": result["reason"],
-                }
-            )
-            if action == "repost":
-                repost_count += 1
-            elif action == "like":
-                like_count += 1
-            elif action == "comment":
-                comment_count += 1
-            else:
-                skip_count += 1
+        with tracked_run(
+            experiment_name="simulation_cycles",
+            run_name=f"eval_{writer_name}_cycle_{cycle_id[:8]}",
+            params={"writer_name": writer_name, "personas_sampled": len(persona_data)},
+            tags={"cycle_id": cycle_id, "tweet_id": tweet_id, "task": "evaluate_tweet"},
+        ):
+            for persona in persona_data:
+                result = reader.evaluate(
+                    tweet_content=content,
+                    persona_name=persona["name"],
+                    persona_description=persona["description"],
+                    provider=provider,
+                )
+                action = result["action"]
+                engagement_rows.append(
+                    {
+                        "persona_id": persona["id"],
+                        "persona_name": persona["name"],
+                        "action": action,
+                        "reason": result["reason"],
+                    }
+                )
+                if action == "repost":
+                    repost_count += 1
+                elif action == "like":
+                    like_count += 1
+                elif action == "comment":
+                    comment_count += 1
+                else:
+                    skip_count += 1
 
         # ── 3. Persist engagements (short write session) ───────────────────────
         with session_scope() as session:
@@ -368,7 +406,7 @@ def build_simulation_dag():
 
         from news_pipeline.config import get_settings
         from news_pipeline.db.session import session_scope
-        from news_pipeline.llm.groq_client import GroqProvider
+        from news_pipeline.llm.openrouter_client import OpenRouterProvider
         from news_pipeline.simulation.models import (
             SimPromptVersion,
             SimWriter,
@@ -379,6 +417,7 @@ def build_simulation_dag():
             aggregate_writer_scores,
             select_writers_to_mutate,
         )
+        from news_pipeline.tracking.experiment import tracked_run
 
         settings = get_settings()
         cycle_id = cycle["cycle_id"]
@@ -442,7 +481,7 @@ def build_simulation_dag():
 
         # ── 4. Identify and mutate underperformers ────────────────────────────
         mutate_ids = select_writers_to_mutate(writer_scores, bottom_n=settings.sim_bottom_n_mutate)
-        provider = GroqProvider()
+        provider = OpenRouterProvider()
         mutator = PromptMutator()
         mutations: list[dict] = []
 
@@ -479,15 +518,25 @@ def build_simulation_dag():
                 }
 
             # Mutation LLM call — outside any DB session
-            new_prompt = mutator.mutate(
-                writer_name=writer_data["name"],
-                persona_description=writer_data["persona"],
-                current_prompt=writer_data["current_prompt"],
-                recent_scores=recent_scores,
-                top_performer_name=top_name,
-                top_performer_prompt=top_prompt,
-                provider=provider,
-            )
+            with tracked_run(
+                experiment_name="simulation_cycles",
+                run_name=f"mutate_{writer_data['name']}_cycle_{cycle_number}",
+                params={
+                    "writer_name": writer_data["name"],
+                    "from_version": writer_data["current_version_number"],
+                    "triggered_by_score": data["engagement_score"],
+                },
+                tags={"cycle_id": cycle_id, "writer_id": writer_id, "task": "score_and_mutate"},
+            ):
+                new_prompt = mutator.mutate(
+                    writer_name=writer_data["name"],
+                    persona_description=writer_data["persona"],
+                    current_prompt=writer_data["current_prompt"],
+                    recent_scores=recent_scores,
+                    top_performer_name=top_name,
+                    top_performer_prompt=top_prompt,
+                    provider=provider,
+                )
 
             # Persist new prompt version + update writer pointer
             with session_scope() as session:
@@ -538,15 +587,13 @@ def build_simulation_dag():
 
     @task
     def log_to_mlflow(result: dict, cycle: dict) -> None:
-        """Log cycle results to MLflow and update SimCycle with run_id + completed_at.
+        """Log cycle results to each writer's persistent MLflow run.
 
         Steps:
-        1. Query DB: writer prompt versions (for version numbers + initial prompts).
-        2. Query DB: tweets generated this cycle (for tweet table artifact).
-        3. Enrich writer_scores with prompt_version_number.
-        4. Call tracker.log_cycle_to_mlflow() — parent + nested writer runs.
-        5. Register initial or mutated prompts in MLflow Prompt Registry.
-        6. Update SimCycle.mlflow_run_id and completed_at.
+        1. Fetch writer mlflow_run_ids + current prompt versions from DB.
+        2. Append this cycle's metrics to each writer's run (step=cycle_number).
+        3. Register initial and mutated prompts — attaches prompt artifact to run.
+        4. Stamp SimCycle with completed_at.
         """
         import uuid
         from datetime import datetime, timezone
@@ -557,26 +604,21 @@ def build_simulation_dag():
         from news_pipeline.simulation.models import (
             SimCycle,
             SimPromptVersion,
-            SimTweet,
             SimWriter,
         )
-        from news_pipeline.simulation.tracker import (
-            log_cycle_to_mlflow,
-            register_prompt,
-        )
+        from news_pipeline.simulation.tracker import log_writer_cycle, register_prompt
 
         settings = get_settings()
         cycle_id = result["cycle_id"]
         cycle_number = result["cycle_number"]
-        week_number = cycle["week_number"]
-        story_count = cycle["story_count"]
 
-        # ── 1. Fetch writer prompt version numbers + style_prompts ────────────
+        # ── 1. Fetch writer mlflow_run_ids + current prompt versions ──────────
         with session_scope() as session:
             writer_rows = session.execute(
                 select(
                     SimWriter.id,
                     SimWriter.name,
+                    SimWriter.mlflow_run_id,
                     SimPromptVersion.version_number,
                     SimPromptVersion.style_prompt,
                 )
@@ -585,88 +627,83 @@ def build_simulation_dag():
                     SimWriter.current_version_id == SimPromptVersion.id,
                 )
             ).all()
-            writer_prompt_map = {
+            writer_map = {
                 str(row.id): {
+                    "name": row.name,
+                    "mlflow_run_id": row.mlflow_run_id,
                     "version_number": row.version_number,
                     "style_prompt": row.style_prompt,
-                    "name": row.name,
                 }
                 for row in writer_rows
             }
 
-        # ── 2. Fetch tweet content for this cycle ─────────────────────────────
-        with session_scope() as session:
-            tweet_rows_db = session.execute(
-                select(SimTweet.content, SimWriter.name.label("writer_name"))
-                .join(SimWriter, SimTweet.writer_id == SimWriter.id)
-                .where(SimTweet.cycle_id == uuid.UUID(cycle_id))
-                .order_by(SimWriter.name)
-            ).all()
-            tweet_rows = [
-                {"writer_name": r.writer_name, "content": r.content}
-                for r in tweet_rows_db
-            ]
-
-        # ── 3. Enrich writer_scores with prompt_version_number ────────────────
+        # ── 2. Append metrics to each writer's persistent run ─────────────────
         writer_scores = result["writer_scores"]
         for ws in writer_scores:
-            pm = writer_prompt_map.get(ws["writer_id"], {})
-            ws["prompt_version_number"] = pm.get("version_number", 1)
+            wm = writer_map.get(ws["writer_id"], {})
+            run_id = wm.get("mlflow_run_id")
+            if run_id is None:
+                LOGGER.warning(
+                    "Writer %r has no mlflow_run_id — skipping MLflow logging for this cycle",
+                    ws.get("writer_name"),
+                )
+                continue
 
-        # ── 4. Log to MLflow ──────────────────────────────────────────────────
-        run_id = log_cycle_to_mlflow(
-            cycle_number=cycle_number,
-            week_number=week_number,
-            story_count=story_count,
-            personas_per_tweet=settings.sim_personas_per_tweet,
-            writer_scores=writer_scores,
-            mutations=result["mutations"],
-            tweet_rows=tweet_rows,
-        )
+            readers = max(ws.get("readers_sampled", 0), 1)
+            ws["prompt_version_number"] = wm.get("version_number", 1)
+            log_writer_cycle(
+                writer_run_id=run_id,
+                cycle_number=cycle_number,
+                engagement_score=ws["engagement_score"],
+                repost_rate=ws["repost_count"] / readers,
+                like_rate=ws["like_count"] / readers,
+                comment_rate=ws["comment_count"] / readers,
+                skip_rate=ws["skip_count"] / readers,
+                prompt_version=ws["prompt_version_number"],
+            )
 
-        # ── 5. Register prompts in MLflow Prompt Registry ─────────────────────
-        # Register the initial prompt (v1) for each writer on their first cycle.
-        # We detect "first ever" by version_number == 1 AND no mutation produced them.
+        # ── 3. Register prompts in MLflow Prompt Registry + attach artifacts ──
         mutated_writer_ids = {m["writer_id"] for m in result["mutations"]}
         for ws in writer_scores:
-            pm = writer_prompt_map.get(ws["writer_id"], {})
-            if pm.get("version_number") == 1 and ws["writer_id"] not in mutated_writer_ids:
+            wm = writer_map.get(ws["writer_id"], {})
+            # Register v1 once on the first cycle (not yet mutated, still on version 1).
+            if wm.get("version_number") == 1 and ws["writer_id"] not in mutated_writer_ids:
                 register_prompt(
                     writer_name=ws["writer_name"],
-                    style_prompt=pm["style_prompt"],
+                    style_prompt=wm["style_prompt"],
                     version_number=1,
                     cycle_number=0,
                     triggered_by_score=None,
+                    writer_run_id=wm.get("mlflow_run_id"),
                 )
 
-        # Register each mutated prompt (new version created this cycle).
         for mutation in result["mutations"]:
+            wm = writer_map.get(mutation["writer_id"], {})
             register_prompt(
                 writer_name=mutation["writer_name"],
                 style_prompt=mutation["new_prompt"],
                 version_number=mutation["new_version"],
                 cycle_number=cycle_number,
                 triggered_by_score=mutation["triggered_by_score"],
+                writer_run_id=wm.get("mlflow_run_id"),
             )
 
-        # ── 6. Stamp SimCycle with run_id and completed_at ────────────────────
+        # ── 4. Stamp SimCycle with completed_at ───────────────────────────────
         with session_scope() as session:
             sim_cycle = session.get(SimCycle, uuid.UUID(cycle_id))
             if sim_cycle is not None:
-                sim_cycle.mlflow_run_id = run_id
                 sim_cycle.completed_at = datetime.now(tz=timezone.utc)
 
         LOGGER.info(
-            "Cycle %d logged to MLflow run %s (%d tweets, %d mutations)",
+            "Cycle %d logged to MLflow (%d writers, %d mutations)",
             cycle_number,
-            run_id,
-            len(tweet_rows),
+            len(writer_scores),
             len(result["mutations"]),
         )
 
     @task
     def check_weekly_reset(result: dict, cycle: dict) -> None:
-        """On a week boundary: tag the weekly champion and log a week summary run.
+        """On a week boundary: tag the weekly champion's persistent MLflow run.
 
         A week boundary is detected when the current cycle's week_number is
         greater than the previous cycle's week_number. The champion is the
@@ -678,12 +715,7 @@ def build_simulation_dag():
 
         from news_pipeline.db.session import session_scope
         from news_pipeline.simulation.models import SimCycle, SimWriterCycleScore, SimWriter
-        from news_pipeline.simulation.tracker import (
-            SIMULATION_EXPERIMENT,
-            tag_weekly_champion,
-        )
-        from news_pipeline.tracking.experiment import configure_mlflow
-        import mlflow
+        from news_pipeline.simulation.tracker import tag_weekly_champion
 
         cycle_number = result["cycle_number"]
         current_week = cycle["week_number"]
@@ -709,13 +741,14 @@ def build_simulation_dag():
                 select(
                     SimWriter.name,
                     SimWriter.id,
+                    SimWriter.mlflow_run_id,
                     func.avg(SimWriterCycleScore.engagement_score).label("avg_score"),
                     func.count(SimWriterCycleScore.cycle_id).label("cycle_count"),
                 )
                 .join(SimWriterCycleScore, SimWriterCycleScore.writer_id == SimWriter.id)
                 .join(SimCycle, SimCycle.id == SimWriterCycleScore.cycle_id)
                 .where(SimCycle.week_number == completed_week)
-                .group_by(SimWriter.id, SimWriter.name)
+                .group_by(SimWriter.id, SimWriter.name, SimWriter.mlflow_run_id)
                 .order_by(func.avg(SimWriterCycleScore.engagement_score).desc())
             ).all()
 
@@ -725,52 +758,25 @@ def build_simulation_dag():
 
             champion_name = rows[0].name
             champion_avg = float(rows[0].avg_score)
+            champion_run_id = rows[0].mlflow_run_id
             cycle_count = int(rows[0].cycle_count)
 
-            # Get the cycle numbers for this week (for tagging context)
-            week_cycle_numbers = session.scalars(
-                select(SimCycle.cycle_number).where(SimCycle.week_number == completed_week)
-            ).all()
-
-        # ── Tag the champion in MLflow ────────────────────────────────────────
-        tag_weekly_champion(
-            writer_name=champion_name,
-            week_number=completed_week,
-            avg_score=champion_avg,
-            cycle_numbers=list(week_cycle_numbers),
-        )
-
-        # ── Log a week summary run ────────────────────────────────────────────
-        configure_mlflow()
-        mlflow.set_experiment(SIMULATION_EXPERIMENT)
-        with mlflow.start_run(run_name=f"week_{completed_week:03d}_summary"):
-            mlflow.log_params(
-                {
-                    "week_number": completed_week,
-                    "cycles_in_week": cycle_count,
-                    "champion_writer": champion_name,
-                }
+        # ── Tag the champion's persistent run directly ────────────────────────
+        if champion_run_id:
+            tag_weekly_champion(
+                writer_run_id=champion_run_id,
+                writer_name=champion_name,
+                week_number=completed_week,
+                avg_score=champion_avg,
             )
-            mlflow.set_tags({"run_type": "week_summary", "week": str(completed_week)})
-            mlflow.log_metrics(
-                {
-                    "champion_avg_score": champion_avg,
-                    "writers_ranked": float(len(rows)),
-                },
-                step=completed_week,
-            )
-            # Full week leaderboard as a table artifact
-            mlflow.log_table(
-                data={
-                    "writer_name": [r.name for r in rows],
-                    "avg_engagement_score": [float(r.avg_score) for r in rows],
-                    "cycles_participated": [int(r.cycle_count) for r in rows],
-                },
-                artifact_file="week_leaderboard.json",
+        else:
+            LOGGER.warning(
+                "Champion writer %r has no mlflow_run_id — skipping champion tag",
+                champion_name,
             )
 
         LOGGER.info(
-            "Week %d summary: champion=%s avg=%.3f across %d cycles",
+            "Week %d champion: %s avg=%.3f across %d cycles",
             completed_week,
             champion_name,
             champion_avg,
