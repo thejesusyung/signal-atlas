@@ -1,12 +1,12 @@
 # TODO
 
-- [x] Enforce Groq's request budget globally across the full pipeline, not just per process. The limiter in [src/news_pipeline/llm/rate_limit.py](/Users/max/Documents/Codes/EXP_NEWS_AUTO_STRUCTURE/src/news_pipeline/llm/rate_limit.py) now coordinates through shared state, paces requests across processes, and propagates Groq `retry-after` backoff signals across the queue.
+- [x] Enforce Groq's request budget globally across the full pipeline, not just per process.
+- [x] Fix simulation MLflow tracking — persistent per-writer runs with `step=cycle_number` for real trend lines across cycles.
+- [x] Update README to match current MLflow implementation.
 
 ## MLflow Future Work
 
-- [ ] Fix extraction prompt registry behavior in [src/news_pipeline/tracking/prompt_registry.py](/Users/max/Documents/Codes/PET_NEWS_AUTO_STRUCTURE/src/news_pipeline/tracking/prompt_registry.py). Stop treating repeated DAG runs as implicit prompt registrations, and stop hardcoding prompt loads to version `1`; make runtime loading resolve the intended current version.
-- [ ] Enrich LLM span metadata in [src/news_pipeline/llm/groq_client.py](/Users/max/Documents/Codes/PET_NEWS_AUTO_STRUCTURE/src/news_pipeline/llm/groq_client.py) with `article_id`, `prompt_version`, and other useful fields already present in `LLMTraceContext`, so traces show stronger lineage in MLflow.
-- [ ] Remove hardcoded MLflow experiment names across [dags/extraction_dag.py](/Users/max/Documents/Codes/PET_NEWS_AUTO_STRUCTURE/dags/extraction_dag.py), [dags/ingestion_dag.py](/Users/max/Documents/Codes/PET_NEWS_AUTO_STRUCTURE/dags/ingestion_dag.py), and [src/news_pipeline/simulation/tracker.py](/Users/max/Documents/Codes/PET_NEWS_AUTO_STRUCTURE/src/news_pipeline/simulation/tracker.py); use settings consistently so the tracking layout is configurable and coherent.
-- [ ] Add richer MLflow artifacts for signal detection in [dags/extraction_dag.py](/Users/max/Documents/Codes/PET_NEWS_AUTO_STRUCTURE/dags/extraction_dag.py) and [src/news_pipeline/signals/detector.py](/Users/max/Documents/Codes/PET_NEWS_AUTO_STRUCTURE/src/news_pipeline/signals/detector.py), such as a top-candidates table with scores, gating decisions, and supporting article counts.
-- [ ] Update [README.md](/Users/max/Documents/Codes/PET_NEWS_AUTO_STRUCTURE/README.md) to match the current MLflow implementation. The codebase now uses span-based LLM tracing and already includes prompt registry and simulation-cycle lineage, but the docs still describe the older nested `llm_call` model.
-- [ ] Add a README walkthrough of the observability surfaces in Airflow and MLflow: which DAGs and task states to inspect in the Airflow UI, which experiments/runs/tables/prompts/tags to inspect in the MLflow UI, and what those views demonstrate about prompt evolution, lineage, and end-to-end workflow visibility.
+- [ ] Fix extraction prompt registry behavior in `src/news_pipeline/tracking/prompt_registry.py`. Stop treating repeated DAG runs as implicit prompt registrations, and stop hardcoding prompt loads to version `1`.
+- [ ] Enrich LLM span metadata in `src/news_pipeline/llm/groq_client.py` with `article_id`, `prompt_version`, and other fields from `LLMTraceContext` so traces show stronger lineage.
+- [ ] Remove hardcoded MLflow experiment names across DAGs and `tracker.py`; use settings consistently.
+- [ ] Add richer MLflow artifacts for signal detection — a top-candidates table with scores, gating decisions, and supporting article counts.

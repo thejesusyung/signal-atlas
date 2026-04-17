@@ -169,12 +169,13 @@ Every mutation produces a new `SimPromptVersion` row and a new entry in the MLfl
 
 ### Simulation experiment: `simulation_cycles`
 
-- One parent run per cycle (`cycle_NNNN`) with:
-  - **Params**: cycle number, week number, story count, writer count, mutation count, personas per tweet.
-  - **Metrics at step=cycle_number**: `avg_engagement_score`, `top_engagement_score`, `bottom_engagement_score`, `cycle_skip_rate`, `mutation_count`.
-  - **Artifact**: tweet table (`cycle_tweets.json`).
-- Nested writer run per writer (`{writer_name}_cNNNN`) with per-writer metrics at same step.
-- Weekly champion run is tagged `week_champion=true` after 7 cycles.
+- One **persistent run per writer** (`writer_{name}`) created at seed time and resumed every cycle.
+  - **Params**: `writer_name`, `persona` — set once at creation.
+  - **Metrics at step=cycle_number**: `engagement_score`, `repost_rate`, `like_rate`, `comment_rate`, `skip_rate`, `prompt_version`.
+  - Using `step=cycle_number` means MLflow renders a real trend line for each metric across all cycles.
+  - **Artifacts**: `prompt_v1.txt`, `prompt_v2.txt`, … appended each time a mutation fires.
+- The week's top-performing writer run is tagged `champion=true`, `champion_week=N`, `champion_avg_score`.
+- To compare all writers: open `simulation_cycles`, filter `attributes.run_name LIKE 'writer_%'`, select all → Compare.
 
 ### Prompt Registry
 
