@@ -15,11 +15,13 @@ services:
           --port 5000 \
           --backend-store-uri $$MLFLOW_BACKEND_STORE_URI \
           --artifacts-destination $$MLFLOW_ARTIFACT_ROOT \
-          --serve-artifacts
+          --serve-artifacts \
+          --gunicorn-opts "--workers 1 --timeout 120"
     ports:
       - "5000:5000"
     volumes:
       - ./mlruns:/opt/project/mlruns
+    mem_limit: 600m
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:5000/ >/dev/null"]
       interval: 10s
@@ -40,6 +42,7 @@ services:
       - ./src:/opt/project/src
       - ./config:/opt/project/config
       - ./mlruns:/opt/project/mlruns
+    mem_limit: 300m
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:${API_PORT}/stats >/dev/null"]
       interval: 30s
