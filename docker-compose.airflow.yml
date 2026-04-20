@@ -10,14 +10,14 @@ services:
       - -lc
       - |
         airflow db migrate &&
-        if ! airflow users list | tail -n +3 | awk '{print $$1}' | grep -qx '${AIRFLOW_ADMIN_USERNAME}'; then
+        if ! airflow users list | tail -n +3 | awk '{print $$1}' | grep -qx "$$AIRFLOW_ADMIN_USERNAME"; then
           airflow users create \
             --role Admin \
-            --username ${AIRFLOW_ADMIN_USERNAME} \
-            --password ${AIRFLOW_ADMIN_PASSWORD} \
+            --username "$$AIRFLOW_ADMIN_USERNAME" \
+            --password "$$AIRFLOW_ADMIN_PASSWORD" \
             --firstname Airflow \
             --lastname Admin \
-            --email ${AIRFLOW_ADMIN_EMAIL};
+            --email "$$AIRFLOW_ADMIN_EMAIL";
         fi &&
         airflow pools set llm_pool 3 'LLM extraction concurrency limit'
     volumes:
