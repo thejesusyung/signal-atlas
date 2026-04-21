@@ -1,0 +1,670 @@
+"""Simulation pipeline — standalone ECS Fargate entrypoint.
+
+Replaces simulation_dag.py. Runs the full simulation cycle: seed writers,
+fetch stories, generate tweets, evaluate with personas, score and mutate,
+log to MLflow, check weekly champion.
+
+LLM fan-outs (generate_tweet, evaluate_tweet) use ThreadPoolExecutor.
+Rate limiting is handled by get_shared_rate_limiter (thread-safe, DB-backed).
+"""
+
+from __future__ import annotations
+
+import logging
+import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta, timezone
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+LOGGER = logging.getLogger(__name__)
+
+_EPOCH = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+
+def run() -> None:
+    LOGGER.info("Simulation pipeline starting")
+
+    _seed_db()
+    stories = _fetch_stories()
+    cycle = _create_cycle(stories)
+    tweet_inputs = _prepare_tweet_inputs(cycle, stories)
+    tweets = _generate_tweets_parallel(tweet_inputs)
+    evaluations = _evaluate_tweets_parallel(tweets)
+    result = _score_and_mutate(evaluations, cycle)
+    _log_to_mlflow(result, cycle)
+    _check_weekly_reset(result, cycle)
+
+    LOGGER.info(
+        "Simulation cycle %d complete: %d writers, %d mutations",
+        result["cycle_number"],
+        len(result["writer_scores"]),
+        len(result["mutations"]),
+    )
+
+
+# ── Fan-out wrappers ──────────────────────────────────────────────────────────
+
+def _generate_tweets_parallel(tweet_inputs: list[dict]) -> list[dict]:
+    results = []
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = {pool.submit(_generate_tweet, ti): ti for ti in tweet_inputs}
+        for future in as_completed(futures):
+            try:
+                results.append(future.result())
+            except Exception:
+                LOGGER.exception("generate_tweet failed for input %s", futures[future].get("writer_name"))
+    return results
+
+
+def _evaluate_tweets_parallel(tweets: list[dict]) -> list[dict]:
+    results = []
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = {pool.submit(_evaluate_tweet, t): t for t in tweets}
+        for future in as_completed(futures):
+            try:
+                results.append(future.result())
+            except Exception:
+                LOGGER.exception("evaluate_tweet failed for tweet %s", futures[future].get("tweet_id"))
+    return results
+
+
+# ── Task implementations (verbatim logic from simulation_dag.py) ──────────────
+
+def _seed_db() -> None:
+    from sqlalchemy import select
+
+    from news_pipeline.config import get_settings
+    from news_pipeline.db.session import session_scope
+    from news_pipeline.simulation.models import SimPromptVersion, SimWriter
+    from news_pipeline.simulation.seeder import seed_all
+    from news_pipeline.simulation.tracker import ensure_writer_run
+
+    settings = get_settings()
+    with session_scope() as session:
+        seed_all(
+            session,
+            writers_path=settings.sim_writers_config_path,
+            personas_path=settings.sim_personas_config_path,
+        )
+
+    with session_scope() as session:
+        writers = session.scalars(select(SimWriter)).all()
+        for writer in writers:
+            if writer.mlflow_run_id is not None:
+                continue
+            version = session.get(SimPromptVersion, writer.current_version_id)
+            initial_prompt = version.style_prompt if version else ""
+            run_id = ensure_writer_run(
+                writer_name=writer.name,
+                persona_description=writer.persona_description,
+                initial_prompt=initial_prompt,
+            )
+            writer.mlflow_run_id = run_id
+
+
+def _fetch_stories() -> list[dict]:
+    from sqlalchemy import desc, select
+
+    from news_pipeline.config import get_settings
+    from news_pipeline.db.models import ProcessingStatus, RawArticle, Signal
+    from news_pipeline.db.session import session_scope
+
+    settings = get_settings()
+    limit = settings.sim_cycle_top_stories
+    cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=12)
+
+    with session_scope() as session:
+        signals = session.scalars(
+            select(Signal)
+            .where(Signal.detected_at >= cutoff)
+            .order_by(desc(Signal.score))
+            .limit(limit)
+        ).all()
+
+        stories: list[dict] = []
+        seen: set[str] = set()
+
+        for signal in signals:
+            for aid in (signal.article_ids or []):
+                aid_str = str(aid)
+                if aid_str in seen:
+                    continue
+                article = session.get(RawArticle, aid)
+                if article is None:
+                    continue
+                seen.add(aid_str)
+                stories.append(_article_to_story(article, signal.signal_type, signal.score))
+                break
+
+        if len(stories) < limit:
+            extras = session.scalars(
+                select(RawArticle)
+                .where(RawArticle.processing_status == ProcessingStatus.extracted)
+                .order_by(desc(RawArticle.ingested_at))
+                .limit(limit * 3)
+            ).all()
+            for article in extras:
+                if len(stories) >= limit:
+                    break
+                if str(article.id) in seen:
+                    continue
+                seen.add(str(article.id))
+                stories.append(_article_to_story(article, "recent", 0.0))
+
+    LOGGER.info("Fetched %d stories for simulation cycle", len(stories))
+    return stories
+
+
+def _create_cycle(stories: list[dict]) -> dict:
+    from sqlalchemy import func, select
+
+    from news_pipeline.db.session import session_scope
+    from news_pipeline.simulation.models import SimCycle
+
+    with session_scope() as session:
+        max_cycle = session.scalar(select(func.max(SimCycle.cycle_number))) or 0
+        cycle_number = max_cycle + 1
+        week_number = (datetime.now(tz=timezone.utc) - _EPOCH).days // 7
+
+        cycle = SimCycle(
+            cycle_number=cycle_number,
+            week_number=week_number,
+            story_ids=[s["article_id"] for s in stories],
+        )
+        session.add(cycle)
+        session.flush()
+        cycle_id = str(cycle.id)
+
+    LOGGER.info("Created cycle %d (week %d) with %d stories", cycle_number, week_number, len(stories))
+    return {
+        "cycle_id": cycle_id,
+        "cycle_number": cycle_number,
+        "week_number": week_number,
+        "story_count": len(stories),
+    }
+
+
+def _prepare_tweet_inputs(cycle: dict, stories: list[dict]) -> list[dict]:
+    from sqlalchemy import select
+
+    from news_pipeline.db.session import session_scope
+    from news_pipeline.simulation.models import SimPromptVersion, SimWriter
+
+    with session_scope() as session:
+        writers = session.scalars(select(SimWriter)).all()
+        inputs = []
+        for writer in writers:
+            if writer.current_version_id is None:
+                LOGGER.warning("Writer %r has no current version, skipping", writer.name)
+                continue
+            version = session.get(SimPromptVersion, writer.current_version_id)
+            if version is None:
+                LOGGER.warning("Prompt version not found for writer %r, skipping", writer.name)
+                continue
+            for story in stories:
+                inputs.append(
+                    {
+                        "cycle_id": cycle["cycle_id"],
+                        "writer_id": str(writer.id),
+                        "writer_name": writer.name,
+                        "prompt_version_id": str(version.id),
+                        "prompt_version_number": version.version_number,
+                        "style_prompt": version.style_prompt,
+                        "story": story,
+                    }
+                )
+
+    LOGGER.info("Prepared %d tweet inputs (%d writers × %d stories)", len(inputs), len(writers), len(stories))
+    return inputs
+
+
+def _generate_tweet(tweet_input: dict) -> dict:
+    from news_pipeline.llm.openrouter_client import OpenRouterProvider
+    from news_pipeline.db.session import session_scope
+    from news_pipeline.simulation.models import SimTweet
+    from news_pipeline.simulation.writer import TweetWriter
+    from news_pipeline.tracking.experiment import tracked_run
+
+    cycle_id = tweet_input["cycle_id"]
+    writer_id = tweet_input["writer_id"]
+    writer_name = tweet_input["writer_name"]
+    prompt_version_id = tweet_input["prompt_version_id"]
+    prompt_version_number = tweet_input["prompt_version_number"]
+    style_prompt = tweet_input["style_prompt"]
+    story = tweet_input["story"]
+
+    provider = OpenRouterProvider()
+    with tracked_run(
+        experiment_name="simulation_cycles",
+        run_name=f"tweet_{writer_name}_cycle_{cycle_id[:8]}",
+        params={"writer_name": writer_name, "prompt_version": prompt_version_number},
+        tags={"cycle_id": cycle_id, "writer_id": writer_id, "task": "generate_tweet"},
+    ):
+        content = TweetWriter().generate(
+            story=story,
+            style_prompt=style_prompt,
+            writer_name=writer_name,
+            prompt_version=prompt_version_number,
+            provider=provider,
+        )
+
+    with session_scope() as session:
+        article_uuid = uuid.UUID(story["article_id"]) if story.get("article_id") else None
+        tweet = SimTweet(
+            cycle_id=uuid.UUID(cycle_id),
+            writer_id=uuid.UUID(writer_id),
+            prompt_version_id=uuid.UUID(prompt_version_id),
+            article_id=article_uuid,
+            content=content,
+        )
+        session.add(tweet)
+        session.flush()
+        tweet_id = str(tweet.id)
+
+    LOGGER.info("Writer %s generated tweet (%d chars) for %r", writer_name, len(content), story["title"][:60])
+    return {
+        "tweet_id": tweet_id,
+        "cycle_id": cycle_id,
+        "writer_id": writer_id,
+        "writer_name": writer_name,
+        "prompt_version_id": prompt_version_id,
+        "article_id": story["article_id"],
+        "content": content,
+    }
+
+
+def _evaluate_tweet(tweet: dict) -> dict:
+    from sqlalchemy import select
+    from sqlalchemy import func as sqlfunc
+
+    from news_pipeline.config import get_settings
+    from news_pipeline.db.session import session_scope
+    from news_pipeline.llm.groq_client import GroqProvider
+    from news_pipeline.simulation.models import SimEngagement, SimPersona
+    from news_pipeline.simulation.reader import PersonaReader
+    from news_pipeline.tracking.experiment import tracked_run
+
+    settings = get_settings()
+    tweet_id = tweet["tweet_id"]
+    writer_name = tweet["writer_name"]
+    content = tweet["content"]
+    cycle_id = tweet["cycle_id"]
+
+    with session_scope() as session:
+        rows = session.scalars(
+            select(SimPersona)
+            .order_by(sqlfunc.random())
+            .limit(settings.sim_personas_per_tweet)
+        ).all()
+        persona_data = [
+            {"id": str(p.id), "name": p.name, "description": p.description}
+            for p in rows
+        ]
+
+    provider = GroqProvider()
+    reader = PersonaReader()
+    repost_count = like_count = comment_count = skip_count = 0
+    engagement_rows: list[dict] = []
+
+    with tracked_run(
+        experiment_name="simulation_cycles",
+        run_name=f"eval_{writer_name}_cycle_{cycle_id[:8]}",
+        params={"writer_name": writer_name, "personas_sampled": len(persona_data)},
+        tags={"cycle_id": cycle_id, "tweet_id": tweet_id, "task": "evaluate_tweet"},
+    ):
+        for persona in persona_data:
+            result = reader.evaluate(
+                tweet_content=content,
+                persona_name=persona["name"],
+                persona_description=persona["description"],
+                provider=provider,
+            )
+            action = result["action"]
+            engagement_rows.append(
+                {"persona_id": persona["id"], "persona_name": persona["name"], "action": action, "reason": result["reason"]}
+            )
+            if action == "repost":
+                repost_count += 1
+            elif action == "like":
+                like_count += 1
+            elif action == "comment":
+                comment_count += 1
+            else:
+                skip_count += 1
+
+    with session_scope() as session:
+        for row in engagement_rows:
+            session.add(
+                SimEngagement(
+                    tweet_id=uuid.UUID(tweet_id),
+                    persona_id=uuid.UUID(row["persona_id"]),
+                    action=row["action"],
+                    reason=row["reason"],
+                )
+            )
+
+    LOGGER.info(
+        "Evaluated tweet by %s — repost=%d like=%d comment=%d skip=%d",
+        writer_name, repost_count, like_count, comment_count, skip_count,
+    )
+    return {
+        **tweet,
+        "repost_count": repost_count,
+        "like_count": like_count,
+        "comment_count": comment_count,
+        "skip_count": skip_count,
+        "readers_sampled": len(engagement_rows),
+    }
+
+
+def _score_and_mutate(evaluations: list[dict], cycle: dict) -> dict:
+    from sqlalchemy import desc, select
+
+    from news_pipeline.config import get_settings
+    from news_pipeline.db.session import session_scope
+    from news_pipeline.llm.openrouter_client import OpenRouterProvider
+    from news_pipeline.simulation.models import SimPromptVersion, SimWriter, SimWriterCycleScore
+    from news_pipeline.simulation.mutator import PromptMutator
+    from news_pipeline.simulation.scorer import aggregate_writer_scores, select_writers_to_mutate
+    from news_pipeline.tracking.experiment import tracked_run
+
+    settings = get_settings()
+    cycle_id = cycle["cycle_id"]
+    cycle_number = cycle["cycle_number"]
+
+    writer_scores = aggregate_writer_scores(evaluations)
+    if not writer_scores:
+        LOGGER.warning("No evaluations received for cycle %d", cycle_number)
+        return {"cycle_id": cycle_id, "cycle_number": cycle_number, "writer_scores": [], "mutations": []}
+
+    sorted_scores = sorted(writer_scores.items(), key=lambda kv: kv[1]["engagement_score"], reverse=True)
+    top_writer_id = sorted_scores[0][0]
+    top_writer_data = sorted_scores[0][1]
+
+    with session_scope() as session:
+        for writer_id, data in writer_scores.items():
+            session.add(
+                SimWriterCycleScore(
+                    cycle_id=uuid.UUID(cycle_id),
+                    writer_id=uuid.UUID(writer_id),
+                    prompt_version_id=(uuid.UUID(data["prompt_version_id"]) if data.get("prompt_version_id") else None),
+                    engagement_score=data["engagement_score"],
+                    repost_count=data["repost_count"],
+                    like_count=data["like_count"],
+                    comment_count=data["comment_count"],
+                    skip_count=data["skip_count"],
+                    tweet_count=data["tweet_count"],
+                    reader_sample_count=data["readers_sampled"],
+                )
+            )
+
+    LOGGER.info(
+        "Cycle %d scores: %s",
+        cycle_number,
+        " | ".join(f"{d['writer_name']}={d['engagement_score']:.3f}" for _, d in sorted_scores),
+    )
+
+    with session_scope() as session:
+        top_writer = session.get(SimWriter, uuid.UUID(top_writer_id))
+        top_version = (
+            session.get(SimPromptVersion, top_writer.current_version_id)
+            if top_writer and top_writer.current_version_id
+            else None
+        )
+        top_prompt = top_version.style_prompt if top_version else ""
+        top_name = top_writer.name if top_writer else top_writer_data["writer_name"]
+
+    mutate_ids = select_writers_to_mutate(writer_scores, bottom_n=settings.sim_bottom_n_mutate)
+    provider = OpenRouterProvider()
+    mutator = PromptMutator()
+    mutations: list[dict] = []
+
+    for writer_id in mutate_ids:
+        data = writer_scores[writer_id]
+        writer_name = data["writer_name"]
+
+        with session_scope() as session:
+            writer = session.get(SimWriter, uuid.UUID(writer_id))
+            if writer is None or writer.current_version_id is None:
+                continue
+            current_version = session.get(SimPromptVersion, writer.current_version_id)
+            if current_version is None:
+                continue
+            recent = session.scalars(
+                select(SimWriterCycleScore)
+                .where(SimWriterCycleScore.writer_id == writer.id)
+                .order_by(desc(SimWriterCycleScore.cycle_id))
+                .limit(3)
+            ).all()
+            recent_scores = [r.engagement_score for r in reversed(recent)]
+            writer_data = {
+                "id": str(writer.id),
+                "name": writer.name,
+                "persona": writer.persona_description,
+                "current_prompt": current_version.style_prompt,
+                "current_version_number": current_version.version_number,
+                "current_version_id": str(current_version.id),
+            }
+
+        with tracked_run(
+            experiment_name="simulation_cycles",
+            run_name=f"mutate_{writer_data['name']}_cycle_{cycle_number}",
+            params={"writer_name": writer_data["name"], "from_version": writer_data["current_version_number"], "triggered_by_score": data["engagement_score"]},
+            tags={"cycle_id": cycle_id, "writer_id": writer_id, "task": "score_and_mutate"},
+        ):
+            new_prompt = mutator.mutate(
+                writer_name=writer_data["name"],
+                persona_description=writer_data["persona"],
+                current_prompt=writer_data["current_prompt"],
+                recent_scores=recent_scores,
+                top_performer_name=top_name,
+                top_performer_prompt=top_prompt,
+                provider=provider,
+            )
+
+        with session_scope() as session:
+            new_version = SimPromptVersion(
+                writer_id=uuid.UUID(writer_data["id"]),
+                version_number=writer_data["current_version_number"] + 1,
+                style_prompt=new_prompt,
+                parent_id=uuid.UUID(writer_data["current_version_id"]),
+                cycle_introduced=cycle_number,
+                triggered_by_score=data["engagement_score"],
+            )
+            session.add(new_version)
+            session.flush()
+            new_version_id = str(new_version.id)
+            new_version_number = new_version.version_number
+            writer = session.get(SimWriter, uuid.UUID(writer_data["id"]))
+            writer.current_version_id = new_version.id
+
+        mutations.append(
+            {
+                "writer_id": writer_id,
+                "writer_name": writer_name,
+                "old_version": writer_data["current_version_number"],
+                "new_version": new_version_number,
+                "new_version_id": new_version_id,
+                "triggered_by_score": data["engagement_score"],
+                "old_prompt": writer_data["current_prompt"],
+                "new_prompt": new_prompt,
+            }
+        )
+        LOGGER.info(
+            "Mutated %s: v%d → v%d (score was %.3f)",
+            writer_name, writer_data["current_version_number"], new_version_number, data["engagement_score"],
+        )
+
+    return {
+        "cycle_id": cycle_id,
+        "cycle_number": cycle_number,
+        "writer_scores": [{"writer_id": wid, **d} for wid, d in sorted_scores],
+        "mutations": mutations,
+    }
+
+
+def _log_to_mlflow(result: dict, cycle: dict) -> None:
+    from sqlalchemy import select
+
+    from news_pipeline.db.session import session_scope
+    from news_pipeline.simulation.models import SimCycle, SimPromptVersion, SimWriter
+    from news_pipeline.simulation.tracker import log_writer_cycle, register_prompt
+
+    cycle_id = result["cycle_id"]
+    cycle_number = result["cycle_number"]
+
+    with session_scope() as session:
+        writer_rows = session.execute(
+            select(
+                SimWriter.id,
+                SimWriter.name,
+                SimWriter.mlflow_run_id,
+                SimPromptVersion.version_number,
+                SimPromptVersion.style_prompt,
+            )
+            .join(SimPromptVersion, SimWriter.current_version_id == SimPromptVersion.id)
+        ).all()
+        writer_map = {
+            str(row.id): {
+                "name": row.name,
+                "mlflow_run_id": row.mlflow_run_id,
+                "version_number": row.version_number,
+                "style_prompt": row.style_prompt,
+            }
+            for row in writer_rows
+        }
+
+    writer_scores = result["writer_scores"]
+    for ws in writer_scores:
+        wm = writer_map.get(ws["writer_id"], {})
+        run_id = wm.get("mlflow_run_id")
+        if run_id is None:
+            LOGGER.warning("Writer %r has no mlflow_run_id — skipping MLflow logging", ws.get("writer_name"))
+            continue
+        readers = max(ws.get("readers_sampled", 0), 1)
+        ws["prompt_version_number"] = wm.get("version_number", 1)
+        log_writer_cycle(
+            writer_run_id=run_id,
+            cycle_number=cycle_number,
+            engagement_score=ws["engagement_score"],
+            repost_rate=ws["repost_count"] / readers,
+            like_rate=ws["like_count"] / readers,
+            comment_rate=ws["comment_count"] / readers,
+            skip_rate=ws["skip_count"] / readers,
+            prompt_version=ws["prompt_version_number"],
+        )
+
+    mutated_writer_ids = {m["writer_id"] for m in result["mutations"]}
+    for ws in writer_scores:
+        wm = writer_map.get(ws["writer_id"], {})
+        if wm.get("version_number") == 1 and ws["writer_id"] not in mutated_writer_ids:
+            register_prompt(
+                writer_name=ws["writer_name"],
+                style_prompt=wm["style_prompt"],
+                version_number=1,
+                cycle_number=0,
+                triggered_by_score=None,
+                writer_run_id=wm.get("mlflow_run_id"),
+            )
+
+    for mutation in result["mutations"]:
+        wm = writer_map.get(mutation["writer_id"], {})
+        register_prompt(
+            writer_name=mutation["writer_name"],
+            style_prompt=mutation["new_prompt"],
+            version_number=mutation["new_version"],
+            cycle_number=cycle_number,
+            triggered_by_score=mutation["triggered_by_score"],
+            writer_run_id=wm.get("mlflow_run_id"),
+        )
+
+    with session_scope() as session:
+        sim_cycle = session.get(SimCycle, uuid.UUID(cycle_id))
+        if sim_cycle is not None:
+            sim_cycle.completed_at = datetime.now(tz=timezone.utc)
+
+    LOGGER.info("Cycle %d logged to MLflow (%d writers, %d mutations)", cycle_number, len(writer_scores), len(result["mutations"]))
+
+
+def _check_weekly_reset(result: dict, cycle: dict) -> None:
+    from sqlalchemy import func, select
+
+    from news_pipeline.db.session import session_scope
+    from news_pipeline.simulation.models import SimCycle, SimWriterCycleScore, SimWriter
+    from news_pipeline.simulation.tracker import tag_weekly_champion
+
+    cycle_number = result["cycle_number"]
+    current_week = cycle["week_number"]
+
+    with session_scope() as session:
+        prev_cycle = session.scalars(
+            select(SimCycle).where(SimCycle.cycle_number == cycle_number - 1)
+        ).first()
+        previous_week = prev_cycle.week_number if prev_cycle else current_week
+
+    if current_week <= previous_week:
+        LOGGER.debug("No week boundary at cycle %d (week %d)", cycle_number, current_week)
+        return
+
+    completed_week = previous_week
+    LOGGER.info("Week boundary detected: week %d just completed", completed_week)
+
+    with session_scope() as session:
+        rows = session.execute(
+            select(
+                SimWriter.name,
+                SimWriter.id,
+                SimWriter.mlflow_run_id,
+                func.avg(SimWriterCycleScore.engagement_score).label("avg_score"),
+                func.count(SimWriterCycleScore.cycle_id).label("cycle_count"),
+            )
+            .join(SimWriterCycleScore, SimWriterCycleScore.writer_id == SimWriter.id)
+            .join(SimCycle, SimCycle.id == SimWriterCycleScore.cycle_id)
+            .where(SimCycle.week_number == completed_week)
+            .group_by(SimWriter.id, SimWriter.name, SimWriter.mlflow_run_id)
+            .order_by(func.avg(SimWriterCycleScore.engagement_score).desc())
+        ).all()
+
+        if not rows:
+            LOGGER.warning("No scores found for completed week %d", completed_week)
+            return
+
+        champion_name = rows[0].name
+        champion_avg = float(rows[0].avg_score)
+        champion_run_id = rows[0].mlflow_run_id
+        cycle_count = int(rows[0].cycle_count)
+
+    if champion_run_id:
+        tag_weekly_champion(
+            writer_run_id=champion_run_id,
+            writer_name=champion_name,
+            week_number=completed_week,
+            avg_score=champion_avg,
+        )
+    else:
+        LOGGER.warning("Champion writer %r has no mlflow_run_id — skipping tag", champion_name)
+
+    LOGGER.info(
+        "Week %d champion: %s avg=%.3f across %d cycles",
+        completed_week, champion_name, champion_avg, cycle_count,
+    )
+
+
+def _article_to_story(article, signal_type: str, signal_score: float) -> dict:
+    entity_names = [
+        ae.entity.name
+        for ae in (article.entities or [])[:5]
+        if ae.entity is not None
+    ]
+    return {
+        "article_id": str(article.id),
+        "title": article.title,
+        "summary": (article.cleaned_text or article.summary or "")[:500],
+        "entities": entity_names,
+        "signal_type": signal_type,
+        "signal_score": signal_score,
+    }
+
+
+if __name__ == "__main__":
+    run()
