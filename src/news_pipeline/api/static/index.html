@@ -293,11 +293,16 @@ function WriterHero({ writer, C }) {
                 <span style={{display:'inline-block',transform:promptOpen?'rotate(90deg)':'rotate(0deg)',transition:'transform .15s',fontSize:10}}>▶</span>
                 Current strategy — prompt v{writer.promptV}
               </div>
-              {promptOpen && (
-                <div style={{maxHeight:300,overflowY:'auto',fontFamily:'Lora',fontSize:13,color:C.t2,fontStyle:'italic',lineHeight:1.75}}>"{writer.currentPrompt}"</div>
-              )}
-              {!promptOpen && (
-                <div onClick={() => setPromptOpen(true)} style={{fontFamily:'Lora',fontSize:13,color:C.t2,fontStyle:'italic',lineHeight:1.75,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',cursor:'pointer'}}>"{writer.currentPrompt}"</div>
+              {promptOpen ? (
+                <>
+                  <div style={{maxHeight:300,overflowY:'auto',fontFamily:'Lora',fontSize:13,color:C.t2,fontStyle:'italic',lineHeight:1.75}}>"{writer.currentPrompt}"</div>
+                  <div onClick={() => setPromptOpen(false)} style={{fontSize:11,fontWeight:600,color:C.accent,cursor:'pointer',marginTop:6}}>Show less</div>
+                </>
+              ) : (
+                <>
+                  <div style={{fontFamily:'Lora',fontSize:13,color:C.t2,fontStyle:'italic',lineHeight:1.75,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>"{writer.currentPrompt}"</div>
+                  <div onClick={() => setPromptOpen(true)} style={{fontSize:11,fontWeight:600,color:C.accent,cursor:'pointer',marginTop:6}}>Show full prompt</div>
+                </>
               )}
             </div>
           )}
@@ -381,19 +386,25 @@ function EvoEntry({ entry, isCurrent, C }) {
         </div>
       )}
       {open ? (
-        <div style={{
-          maxHeight:300,overflowY:'auto',
-          fontFamily: isCurrent ? 'Lora' : 'DM Sans',
-          fontStyle: isCurrent ? 'italic' : 'normal',
-          fontSize:13,color:C.t3,lineHeight:1.75,
-        }}>{entry.style_prompt}</div>
+        <>
+          <div style={{
+            maxHeight:300,overflowY:'auto',
+            fontFamily: isCurrent ? 'Lora' : 'DM Sans',
+            fontStyle: isCurrent ? 'italic' : 'normal',
+            fontSize:13,color:C.t3,lineHeight:1.75,
+          }}>{entry.style_prompt}</div>
+          <div onClick={() => setOpen(false)} style={{fontSize:11,fontWeight:600,color:C.accent,cursor:'pointer',marginTop:6}}>Show less</div>
+        </>
       ) : (
-        <div onClick={() => setOpen(true)} style={{
-          fontFamily: isCurrent ? 'Lora' : 'DM Sans',
-          fontStyle: isCurrent ? 'italic' : 'normal',
-          fontSize:13,color:C.t3,lineHeight:1.75,
-          overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',cursor:'pointer',
-        }}>{entry.style_prompt}</div>
+        <>
+          <div style={{
+            fontFamily: isCurrent ? 'Lora' : 'DM Sans',
+            fontStyle: isCurrent ? 'italic' : 'normal',
+            fontSize:13,color:C.t3,lineHeight:1.75,
+            overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',
+          }}>{entry.style_prompt}</div>
+          <div onClick={() => setOpen(true)} style={{fontSize:11,fontWeight:600,color:C.accent,cursor:'pointer',marginTop:6}}>Show full prompt</div>
+        </>
       )}
     </div>
   );
