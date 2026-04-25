@@ -225,10 +225,10 @@ function WriterCard({ writer, selected, onClick, C }) {
 /* ── WELCOME SCREEN ──────────────────────────────────────── */
 function WelcomeScreen({ onStart, C }) {
   const steps = [
-    {n:'01', title:'Real news, daily', body:'17 RSS feeds are polled every 2 hours. The top stories seed each simulation cycle.'},
-    {n:'02', title:'5 writers tweet', body:"Each writer has a distinct persona and a style prompt. They independently write tweets about the day's top stories."},
-    {n:'03', title:'100 readers vote', body:'100 simulated reader personas across 10 archetypes evaluate every tweet — liking, reposting, commenting, or skipping.'},
-    {n:'04', title:'Losers evolve', body:"Bottom writers get their style prompt rewritten each cycle, guided by the winner's approach. Watch the strategies shift."},
+    {icon:<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="3" y="18" width="5" height="7" rx="1.5" fill={C.accent} opacity=".8"/><rect x="10" y="12" width="5" height="13" rx="1.5" fill={C.accent} opacity=".8"/><rect x="17" y="6" width="5" height="19" rx="1.5" fill={C.accent} opacity=".8"/></svg>, n:'01', title:'Real news, daily', body:'17 RSS feeds are polled every 2 hours. The top stories seed each simulation cycle.'},
+    {icon:<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M15 3L6 16h8L12 25l10-13h-8L15 3z" fill={C.accent} opacity=".8"/></svg>, n:'02', title:'5 writers tweet', body:"Each writer has a distinct persona and a style prompt. They independently write tweets about the day's top stories."},
+    {icon:<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="11" stroke={C.accent} strokeWidth="2" opacity=".8"/><circle cx="9" cy="13" r="2" fill={C.accent} opacity=".8"/><circle cx="14" cy="10" r="2" fill={C.accent} opacity=".8"/><circle cx="19" cy="13" r="2" fill={C.accent} opacity=".8"/><path d="M9 15q2.5 4 10 0" stroke={C.accent} strokeWidth="1.5" strokeLinecap="round" opacity=".8"/></svg>, n:'03', title:'100 readers vote', body:'100 simulated reader personas across 10 archetypes evaluate every tweet — liking, reposting, commenting, or skipping.'},
+    {icon:<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M14 4v8M14 4l-3 3M14 4l3 3" stroke={C.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity=".8"/><path d="M8 14c0 3.3 2.7 6 6 6s6-2.7 6-6" stroke={C.accent} strokeWidth="2" strokeLinecap="round" opacity=".5"/><path d="M5 22q9 4 18 0" stroke={C.accent} strokeWidth="2" strokeLinecap="round" opacity=".3"/></svg>, n:'04', title:'Losers evolve', body:"Bottom writers get their style prompt rewritten each cycle, guided by the winner's approach. Watch the strategies shift."},
   ];
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'32px 48px',background:C.bg,overflowY:'auto',animation:'fadeIn .3s ease'}}>
@@ -242,7 +242,7 @@ function WelcomeScreen({ onStart, C }) {
           {steps.map((s,i) => (
             <div key={i} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'18px 20px',boxShadow:'0 1px 3px rgba(26,15,8,.05)'}}>
               <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
-                <span style={{fontSize:20,lineHeight:1}}>{['📡','✍️','👥','🔁'][i]}</span>
+                {s.icon}
                 <span style={{fontSize:9,fontWeight:700,letterSpacing:'.14em',color:C.faint,textTransform:'uppercase'}}>{s.n}</span>
               </div>
               <div style={{fontFamily:'Lora',fontSize:13.5,fontWeight:600,color:C.t1,marginBottom:6}}>{s.title}</div>
@@ -332,7 +332,7 @@ function TweetCard({ tweet, writer, C }) {
           <span style={{fontSize:11,color:C.muted}}>♥ {tweet.like_count}</span>
         )}
         {tweet.comment_count!=null && (
-          <span style={{fontSize:11,color:C.muted}}>💬 {tweet.comment_count}</span>
+          <span style={{fontSize:11,color:C.muted}}>◇ {tweet.comment_count}</span>
         )}
         <span style={{fontSize:11,fontWeight:700,padding:'3px 11px',borderRadius:99,background:sty.bg,color:sty.c,border:`1px solid ${sty.bdr}`,marginLeft:'auto'}}>
           score {sc.toFixed(3)}
