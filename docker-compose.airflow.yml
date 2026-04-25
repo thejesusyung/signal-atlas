@@ -1,0 +1,67 @@
+services:
+  airflow-init:
+    build: .
+    image: pet-signal-airflow:latest
+    env_file:
+      - .env.airflow
+    entrypoint: []
+    command:
+      - bash
+      - -lc
+      - |
+        airflow db migrate &&
+        if ! airflow users list | tail -n +3 | awk '{print $$1}' | grep -qx "$$AIRFLOW_ADMIN_USERNAME"; then
+          airflow users create \
+            --role Admin \
+            --username "$$AIRFLOW_ADMIN_USERNAME" \
+            --password "$$AIRFLOW_ADMIN_PASSWORD" \
+            --firstname Airflow \
+            --lastname Admin \
+            --email "$$AIRFLOW_ADMIN_EMAIL";
+        fi &&
+        airflow pools set llm_pool 3 'LLM extraction concurrency limit'
+    volumes:
+      - ./alembic:/opt/project/alembic
+      - ./alembic.ini:/opt/project/alembic.ini
+      - ./dags:/opt/project/dags
+      - ./src:/opt/project/src
+      - ./config:/opt/project/config
+      - ./data:/opt/project/data
+
+  airflow-webserver:
+    build: .
+    image: pet-signal-airflow:latest
+    restart: unless-stopped
+    env_file:
+      - .env.airflow
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    command: airflow webserver
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./alembic:/opt/project/alembic
+      - ./alembic.ini:/opt/project/alembic.ini
+      - ./dags:/opt/project/dags
+      - ./src:/opt/project/src
+      - ./config:/opt/project/config
+      - ./data:/opt/project/data
+
+  airflow-scheduler:
+    build: .
+    image: pet-signal-airflow:latest
+    restart: unless-stopped
+    env_file:
+      - .env.airflow
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    command: airflow scheduler
+    volumes:
+      - ./alembic:/opt/project/alembic
+      - ./alembic.ini:/opt/project/alembic.ini
+      - ./dags:/opt/project/dags
+      - ./src:/opt/project/src
+      - ./config:/opt/project/config
+      - ./data:/opt/project/data

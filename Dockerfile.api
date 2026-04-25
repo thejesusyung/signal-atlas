@@ -1,0 +1,36 @@
+FROM python:3.10-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONPATH=/opt/project/src
+
+WORKDIR /opt/project
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --upgrade pip && pip install \
+    "fastapi>=0.115,<1.0" \
+    "uvicorn[standard]>=0.32,<1.0" \
+    "sqlalchemy>=1.4.36,<2.0" \
+    "psycopg2-binary>=2.9,<3.0" \
+    "pgvector>=0.3,<1.0" \
+    "pydantic>=2.9,<3.0" \
+    "pydantic-settings>=2.5,<3.0" \
+    "python-dotenv>=1.0,<2.0" \
+    "mlflow>=2.20,<3.0" \
+    "numpy>=1.26,<3.0" \
+    "jinja2>=3.1,<4.0" \
+    "python-slugify>=8.0,<9.0" \
+    "pyyaml>=6.0,<7.0"
+
+COPY src ./src
+COPY config ./config
+
+RUN mkdir -p /opt/project/mlruns
+
+CMD ["uvicorn", "news_pipeline.api.app:app", "--host", "0.0.0.0", "--port", "8000"]

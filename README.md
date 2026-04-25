@@ -2,7 +2,7 @@
 
 LLMs don't sleep. So why should your demo?
 
-Signal Atlas is a live, self-updating news intelligence pipeline paired with a Twitter-style simulation that runs every single day on real headlines. You can check what the agents are writing about right now at **[141.94.36.142:8000/docs](http://141.94.36.142:8000/)** — today's news, today's tweets, today's leaderboard.
+Signal Atlas is a live, self-updating news intelligence pipeline paired with a Twitter-style simulation that runs every single day on real headlines. You can check what the agents are writing about right now at **[3.139.90.214:8000](http://3.139.90.214:8000/)** — today's news, today's tweets, today's leaderboard.
 
 The idea is simple: small LLMs are cheap enough to run continuously, and when you point them at a live RSS stream and let them compete against each other, something genuinely interesting emerges. Writer agents develop distinct voices over time. Their prompts evolve based on what resonates. The simulation never resets.
 
@@ -63,7 +63,66 @@ simulation_dag (daily)
 
 MLflow tracks every Groq extraction call (nested `llm_call` runs under `extraction_monitoring`) and every simulation cycle (nested writer runs under `simulation_cycles`).
 
-## Services
+## Production Infrastructure
+
+The production stack is split across three AWS resources:
+
+| Resource | Address | Purpose |
+|---|---|---|
+| 2GB EC2 (always-on) | `3.139.90.214` | API + MLflow — the public-facing demo |
+| Airflow EC2 (on-demand) | `18.220.197.178` | Airflow webserver + scheduler — starts/stops on schedule |
+| RDS PostgreSQL | `database-1.c7ws84iwkfb0.us-east-2.rds.amazonaws.com` | All three databases (news_pipeline, airflow_metadata, mlflow_tracking) |
+
+### Public URLs
+
+| Service | URL |
+|---|---|
+| API + demo UI | `http://3.139.90.214:8000` |
+| MLflow tracking | `http://3.139.90.214:5000` |
+| Airflow UI (when EC2 is running) | `http://18.220.197.178:8080` |
+
+### Airflow schedule
+
+The Airflow EC2 is automatically started and stopped by EventBridge Scheduler to save cost (~$8/month vs ~$30/month always-on):
+
+| UTC time | Action |
+|---|---|
+| 07:45, 13:45, 19:45 | EC2 starts |
+| 10:00, 16:00, 22:00 | EC2 stops |
+
+DAGs run inside these 2h15m windows. The simulation DAG (daily at 10:30 UTC) runs inside the morning window.
+
+---
+
+## Cutover Runbook — Switching pipeline from old server to new
+
+When ready to make the new server the active pipeline (stop the old server and start ingesting/extracting/simulating on the new one):
+
+**Step 1 — Sync the data gap** (run from the old server, ~5 min):
+```bash
+# SSH into old server, then:
+PGPASSWORD_RDS=news_pipeline ./scripts/db_migrate.sh \
+  database-1.c7ws84iwkfb0.us-east-2.rds.amazonaws.com 5432 postgres
+```
+
+**Step 2 — Stop the old Airflow** (so it stops making LLM calls):
+```bash
+# On the old server:
+docker compose -f docker-compose.dev.yml stop airflow-webserver airflow-scheduler
+```
+
+**Step 3 — Unpause DAGs on the new Airflow EC2**:
+1. Wait for the Airflow EC2 to be in its active window (or start it manually from EC2 console)
+2. Open `http://18.220.197.178:8080` (login: `admin` / `admin`)
+3. Unpause `ingestion_dag`, `extraction_dag`, and `simulation_dag`
+
+**Step 4 — Update any shared links** to point to `http://3.139.90.214:8000`
+
+**Step 5 — Shut down the old server** once you've confirmed DAGs are running cleanly on the new setup.
+
+---
+
+## Services (local dev)
 
 | Service | URL | Purpose |
 |---|---|---|
@@ -73,11 +132,11 @@ MLflow tracks every Groq extraction call (nested `llm_call` runs under `extracti
 | `mlflow` | `http://localhost:5000` | experiment tracking + prompt registry |
 | `api` | `http://localhost:8000/docs` | FastAPI query interface |
 
-## Quick Start
+## Quick Start (local dev)
 
 1. Copy `.env.example` to `.env`.
 2. Set `GROQ_API_KEY` in `.env`.
-3. Run `make up`.
+3. Run `make up-dev`.
 4. If upgrading an existing database: `make db-upgrade`.
 5. Open the UIs:
    - Airflow: `http://localhost:8080`
@@ -263,8 +322,10 @@ alembic/
 | Command | Description |
 |---|---|
 | `make setup` | Install Python dependencies locally |
-| `make up` | Build and start all services |
-| `make down` | Stop services |
+| `make up-dev` | Build and start all services (local dev, full stack) |
+| `make down-dev` | Stop local dev services |
+| `make up-prod` | Start production stack on 2GB EC2 (API + MLflow) |
+| `make up-airflow` | Start Airflow stack on Airflow EC2 |
 | `make test` | Run the test suite |
 | `make lint` | Run Ruff |
 | `make db-upgrade` | Apply Alembic migrations |
