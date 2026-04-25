@@ -17,3 +17,5 @@ mlruns/
 airflow/
 *.pyc
 ollama_*
+*_accessKeys.csv
+test_bedrock_key.py
