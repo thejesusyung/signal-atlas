@@ -19,6 +19,7 @@ Rules:
 - Make exactly one meaningful change (tone, angle, framing, structure, or focus).
 - Keep the writer's core persona intact — do not change who they fundamentally are.
 - Do not copy the top performer word-for-word; borrow a tactic, not an identity.
+- A strategy describes voice, tone, angle, and structure. It must NOT contain example tweets, specific facts, names, or quoted content.
 - Output only the new strategy text. No preamble, no explanation, no labels.\
 """
 
