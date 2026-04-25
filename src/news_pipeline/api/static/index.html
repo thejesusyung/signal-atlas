@@ -266,6 +266,7 @@ function WelcomeScreen({ onStart, C }) {
 /* ── WRITER HERO ─────────────────────────────────────────── */
 function WriterHero({ writer, C }) {
   const color = writerColor(writer.name);
+  const [promptOpen, setPromptOpen] = React.useState(false);
   return (
     <div style={{flexShrink:0,padding:'18px 22px',background:C.surface,borderBottom:`1px solid ${C.border}`,boxShadow:'0 1px 0 rgba(26,15,8,.04)'}}>
       <div style={{display:'flex',alignItems:'flex-start',gap:14}}>
@@ -288,8 +289,16 @@ function WriterHero({ writer, C }) {
           )}
           {writer.currentPrompt && (
             <div style={{background:C.accentSurf,borderLeft:`3px solid ${C.accent}`,borderRadius:'0 8px 8px 0',padding:'9px 14px',maxWidth:520}}>
-              <div style={{fontSize:8.5,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:C.accent,marginBottom:4,opacity:.8}}>Current strategy — prompt v{writer.promptV}</div>
-              <div style={{fontFamily:'Lora',fontSize:13,color:C.t2,fontStyle:'italic',lineHeight:1.75}}>"{writer.currentPrompt}"</div>
+              <div onClick={() => setPromptOpen(!promptOpen)} style={{fontSize:8.5,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:C.accent,marginBottom:4,opacity:.8,cursor:'pointer',display:'flex',alignItems:'center',gap:6}}>
+                <span style={{display:'inline-block',transform:promptOpen?'rotate(90deg)':'rotate(0deg)',transition:'transform .15s',fontSize:10}}>▶</span>
+                Current strategy — prompt v{writer.promptV}
+              </div>
+              {promptOpen && (
+                <div style={{maxHeight:300,overflowY:'auto',fontFamily:'Lora',fontSize:13,color:C.t2,fontStyle:'italic',lineHeight:1.75}}>"{writer.currentPrompt}"</div>
+              )}
+              {!promptOpen && (
+                <div onClick={() => setPromptOpen(true)} style={{fontFamily:'Lora',fontSize:13,color:C.t2,fontStyle:'italic',lineHeight:1.75,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',cursor:'pointer'}}>"{writer.currentPrompt}"</div>
+              )}
             </div>
           )}
         </div>
@@ -345,6 +354,7 @@ function TweetCard({ tweet, writer, C }) {
 /* ── EVOLUTION ENTRY ─────────────────────────────────────── */
 function EvoEntry({ entry, isCurrent, C }) {
   const isMut = entry.version_number > 1;
+  const [open, setOpen] = React.useState(false);
   return (
     <div style={{
       padding:'14px 16px',
@@ -352,7 +362,8 @@ function EvoEntry({ entry, isCurrent, C }) {
       borderLeft:`3px solid ${isCurrent ? C.accent : isMut ? '#c49030' : 'transparent'}`,
       background: isCurrent ? C.accentSurf : 'transparent',
     }}>
-      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6,flexWrap:'wrap'}}>
+      <div onClick={() => setOpen(!open)} style={{display:'flex',alignItems:'center',gap:6,marginBottom:6,flexWrap:'wrap',cursor:'pointer'}}>
+        <span style={{display:'inline-block',transform:open?'rotate(90deg)':'rotate(0deg)',transition:'transform .15s',fontSize:9,color:C.muted}}>▶</span>
         <span style={{
           fontSize:10,fontWeight:700,padding:'2px 9px',borderRadius:99,
           background: isCurrent ? C.accentSurf : C.surface2,
@@ -369,11 +380,21 @@ function EvoEntry({ entry, isCurrent, C }) {
           ↳ Rewritten after scoring {entry.triggered_by_score.toFixed(3)}
         </div>
       )}
-      <div style={{
-        fontFamily: isCurrent ? 'Lora' : 'DM Sans',
-        fontStyle: isCurrent ? 'italic' : 'normal',
-        fontSize:13,color:C.t3,lineHeight:1.75,
-      }}>{entry.style_prompt}</div>
+      {open ? (
+        <div style={{
+          maxHeight:300,overflowY:'auto',
+          fontFamily: isCurrent ? 'Lora' : 'DM Sans',
+          fontStyle: isCurrent ? 'italic' : 'normal',
+          fontSize:13,color:C.t3,lineHeight:1.75,
+        }}>{entry.style_prompt}</div>
+      ) : (
+        <div onClick={() => setOpen(true)} style={{
+          fontFamily: isCurrent ? 'Lora' : 'DM Sans',
+          fontStyle: isCurrent ? 'italic' : 'normal',
+          fontSize:13,color:C.t3,lineHeight:1.75,
+          overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',cursor:'pointer',
+        }}>{entry.style_prompt}</div>
+      )}
     </div>
   );
 }
